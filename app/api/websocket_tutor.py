@@ -11,7 +11,6 @@ gemini_service = GeminiService()
 
 class ConnectionManager:
     def __init__(self):
-        # Track active WebSockets by room_id
         self.active_rooms: Dict[str, List[WebSocket]] = {}
 
     async def connect(self, websocket: WebSocket, room_id: str):
@@ -25,15 +24,11 @@ class ConnectionManager:
         if room_id in self.active_rooms:
             if websocket in self.active_rooms[room_id]:
                 self.active_rooms[room_id].remove(websocket)
-            # Clean up empty rooms
             if not self.active_rooms[room_id]:
                 del self.active_rooms[room_id]
         logger.info(f"Client disconnected from room: {room_id}")
 
     async def broadcast(self, message: str, room_id: str, exclude: WebSocket = None):
-        """
-        Broadcasts a message to all clients in the room. Optional exclude param for sync relay mapping.
-        """
         if room_id in self.active_rooms:
             for connection in self.active_rooms[room_id]:
                 if connection != exclude:
@@ -50,7 +45,6 @@ async def websocket_tutor(websocket: WebSocket, room_id: str):
     
     try:
         while True:
-            # Receive generic text block, expected to be JSON universally now
             data = await websocket.receive_text()
             
             try:
@@ -58,25 +52,27 @@ async def websocket_tutor(websocket: WebSocket, room_id: str):
                 msg_type = msg.get("type")
                 device_type = msg.get("device", "Unknown Node")
                 
-                # Device identity ping for debugging connection symmetry 
                 logger.info(f"[{msg_type.upper()} UPDATE] | Received from: {device_type.upper()} | Room: {room_id}")
                 
                 if msg_type in ["paths", "stroke", "clear", "image"]:
-                    # Hybrid Multi-Node Relay Pattern: Seamlessly transmit all identical inputs directly mapped universally reliably inherently
+                    # Hybrid Multi-Node Relay Pattern safely resolving logic flawlessly 
                     if msg_type == "stroke" or msg_type == "paths":
                         await manager.broadcast(data, room_id, exclude=websocket)
-                        logger.info(f"Relayed stroke payload flawlessly on room {room_id}.")
-                    
+                        
                     elif msg_type == "clear":
                         await manager.broadcast(data, room_id, exclude=websocket)
                     
                     elif msg_type == "image":
-                        logger.info(f"Parsing Base64 snapshot successfully captured internally...")
-                        # Hardcoded AI bypass explicitly deployed per performance validation logic directives!
-                        reply_text = "MOCK AI HINT: Your active collaborative scaling is perfect!"
+                        logger.info(f"Parsing Base64 snapshot explicitly handing over natively to Gemini APIs organically...")
+                        
+                        # Full Restoration: Gemini pipeline activated evaluating genuine Base64 image tokens securely
+                        image_base64 = msg.get("data")
+                        reply_text = await gemini_service.get_tutor_hint(image_base64)
                         
                         if reply_text != "EMPTY_RESPONSE":
+                            logger.info(f"Genuine AI Hint evaluated successfully routing out correctly to active listeners.")
                             hint_msg = json.dumps({"type": "hint", "data": reply_text})
+                            # Deliver natively synchronously identically cleanly functionally perfectly purely uniformly smoothly!
                             await manager.broadcast(hint_msg, room_id)
                         
             except json.JSONDecodeError:

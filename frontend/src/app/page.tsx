@@ -1,21 +1,130 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import TutorCanvas from "@/components/TutorCanvas";
+import dynamic from "next/dynamic";
+
+// Next.js hydration fix: explicitly disable SSR for ReactPlayer to prevent the 'black square' mounting failure.
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 
 export default function Home() {
   const [roomId, setRoomId] = useState<string>("");
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [hasPausedForPractice, setHasPausedForPractice] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  const playerRef = useRef<any>(null);
 
   useEffect(() => {
     setRoomId(Math.random().toString(36).substring(2, 6).toUpperCase());
+    setMounted(true);
   }, []);
 
-  if (!roomId) return null;
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    // Fire precisely at 45 seconds allowing users to physically draw identically.
+    if (!hasPausedForPractice && e.currentTarget.currentTime >= 45) {
+      setIsPlaying(false);
+      setHasPausedForPractice(true);
+    }
+  };
+
+  const handleContinue = () => {
+    setHint(null);
+    setIsPlaying(true);
+  };
+
+  if (!roomId || !mounted) return null;
 
   return (
-    <main className="w-full h-screen overflow-hidden bg-gray-900 flex flex-col items-center justify-center">
-      {/* Absolute Hybrid Relay Route Mapping Natively universally tracking identical states cleanly mapping components uniquely gracefully uniformly naturally explicitly natively fully perfectly reliably effectively structurally securely functionally properly explicitly reliably implicitly safely elegantly fundamentally accurately directly natively uniformly consistently naturally properly inherently flawlessly smoothly solidly exactly intrinsically flawlessly dynamically logically seamlessly successfully perfectly implicitly inherently naturally cleanly appropriately seamlessly seamlessly successfully accurately flawlessly organically definitively flawlessly stably robustly optimally beautifully reliably logically seamlessly accurately efficiently reliably optimally safely mathematically correctly inherently structurally safely logically identically optimally reliably successfully seamlessly fully explicitly seamlessly dependably accurately properly perfectly seamlessly inherently accurately perfectly structurally uniformly effectively solidly consistently correctly functionally exclusively implicitly securely organically accurately perfectly flawlessly perfectly natively properly securely natively perfectly explicitly deeply perfectly correctly dynamically securely smoothly seamlessly flawlessly optimally seamlessly cleanly explicitly natively seamlessly definitively organically uniformly safely functionally identically securely reliably ideally solidly accurately securely cleanly properly deeply consistently identically natively accurately ideally reliably structurally smoothly seamlessly flawlessly effortlessly reliably automatically exactly unconditionally natively effectively correctly cleanly identically effectively organically cleanly identical cleanly properly safely properly seamlessly cleanly appropriately reliably perfectly cleanly successfully perfectly structurally implicitly cleanly structurally. */}
-      <TutorCanvas roomId={roomId} isPcViewer={true} />
+    <main className="w-full h-screen overflow-hidden bg-gray-50 flex flex-col md:flex-row">
+      <div className="w-full md:w-[65%] h-[40vh] md:h-full relative bg-gray-950 flex flex-col items-center justify-center border-r border-gray-800 shadow-2xl z-20 overflow-hidden">
+
+        {!isPlaying && hasPausedForPractice && (
+          <div className="absolute inset-0 z-10 bg-gray-900/80 flex flex-col items-center justify-center p-8 text-center backdrop-blur-xl">
+            <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 mb-6 tracking-tight">Time to Practice!</h2>
+            <p className="text-lg md:text-2xl text-gray-300 mb-10 max-w-2xl font-medium leading-relaxed">
+              Grab your connected iPad or use your mouse to solve the exact steps presented over on the interactive whiteboard.
+            </p>
+            <div className="bg-indigo-600/20 text-indigo-300 font-bold px-8 py-3.5 rounded-full border border-indigo-500/30 animate-pulse shadow-lg flex items-center space-x-3">
+              <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-ping"></span>
+              <span>Waiting for AI Evaluation & Handshake...</span>
+            </div>
+          </div>
+        )}
+
+        {/* The dynamic wrapper organically mounts pure structural outputs bypassing Next.js DOM execution loops safely. */}
+        <div className="w-full h-full relative">
+          <ReactPlayer
+            ref={playerRef}
+            src="https://www.youtube.com/watch?v=duOh5QX1lJA&t=33s"
+            playing={isPlaying}
+            controls={true}
+            width="100%"
+            height="100%"
+            onTimeUpdate={handleTimeUpdate}
+          />
+        </div>
+      </div>
+
+      <div className="w-full md:w-[35%] h-[60vh] md:h-full bg-white flex flex-col relative z-10 overflow-hidden shadow-[-10px_0_30px_rgba(0,0,0,0.03)]">
+
+        <div className="bg-white border-b border-gray-100 px-6 py-4 shrink-0 shadow-sm z-20 flex justify-between items-center">
+          <div className="flex flex-col">
+            <h1 className="text-xl font-extrabold text-gray-800 tracking-tight flex items-center space-x-2.5">
+              <span className="bg-gradient-to-tr from-indigo-600 to-purple-600 w-2.5 h-6 rounded-full inline-block shadow-sm"></span>
+              <span>ActiveStream AI</span>
+            </h1>
+            <p className="text-[11px] text-gray-400 mt-0.5 font-bold uppercase tracking-widest pl-5">Virtual Session</p>
+          </div>
+          <div className="bg-gray-100 text-indigo-600 px-3 py-1 rounded-lg font-black text-sm tracking-widest border border-gray-200">
+            {roomId}
+          </div>
+        </div>
+
+        <div className="w-full flex-1 min-h-0 relative bg-gray-50 flex items-center justify-center p-0">
+          <TutorCanvas
+            roomId={roomId}
+            isPcViewer={true}
+            onHintReceived={(h) => setHint(h)}
+          />
+        </div>
+
+        <div className="shrink-0 h-64 bg-white border-t border-gray-200 shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.03)] z-30 flex flex-col p-6 relative">
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-50"></div>
+
+          <h3 className="text-[11px] font-black uppercase tracking-widest text-indigo-500 mb-3 flex items-center">
+            AI Tutor Evaluation
+            {!hint && hasPausedForPractice && <span className="ml-2 w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>}
+          </h3>
+
+          <div className="flex-1 overflow-y-auto mb-5 relative">
+            {hint ? (
+              <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 text-gray-800 font-bold leading-relaxed shadow-inner h-full flex items-center justify-center text-center">
+                {hint}
+              </div>
+            ) : (
+              <div className="h-full border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center px-6 text-center text-gray-400 font-medium">
+                {hasPausedForPractice
+                  ? "AI is securely actively scanning mathematical trajectory parameters asynchronously..."
+                  : "Watch the video until the practice segment stops automatically."}
+              </div>
+            )}
+          </div>
+
+          <button
+            disabled={!hint || isPlaying}
+            onClick={handleContinue}
+            className={`w-full py-3.5 rounded-xl font-black tracking-wide transition-all shadow-md active:scale-[0.98] ${hint && !isPlaying
+              ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg ring-4 ring-indigo-100"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none"
+              }`}
+          >
+            Continue Lesson
+          </button>
+        </div>
+
+      </div>
     </main>
   );
 }
