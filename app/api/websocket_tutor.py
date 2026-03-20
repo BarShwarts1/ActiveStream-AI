@@ -19,6 +19,12 @@ class ConnectionManager:
             self.active_rooms[room_id] = []
         self.active_rooms[room_id].append(websocket)
         logger.info(f"Client joined room: {room_id}")
+        
+        # Notify existing clients that a new device connected
+        try:
+            await self.broadcast(json.dumps({"type": "device_connected", "role": "writer"}), room_id, exclude=websocket)
+        except Exception as e:
+            logger.error(f"Error broadcasting connection event: {e}")
 
     def disconnect(self, websocket: WebSocket, room_id: str):
         if room_id in self.active_rooms:

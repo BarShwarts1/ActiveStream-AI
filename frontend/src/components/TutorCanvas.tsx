@@ -10,9 +10,10 @@ interface TutorCanvasProps {
   onHintReceived?: (hint: string) => void;
   clearTrigger?: number;
   onLinkMobileClick?: () => void;
+  onDeviceConnected?: () => void;
 }
 
-export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived, clearTrigger, onLinkMobileClick }: TutorCanvasProps) {
+export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived, clearTrigger, onLinkMobileClick, onDeviceConnected }: TutorCanvasProps) {
   const canvasRef = useRef<ReactSketchCanvasRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -99,6 +100,12 @@ export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived
             // Decoupled floating animations entirely routing generic string states explicitly to parent environments
             if (onHintReceived) {
                 onHintReceived(msg.data);
+            }
+        } else if (msg.type === "device_connected") {
+            if (msg.role === "writer") {
+                if (onDeviceConnected) {
+                    onDeviceConnected();
+                }
             }
         }
       } catch (err) {}
