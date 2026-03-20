@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import TutorCanvas from "@/components/TutorCanvas";
 import dynamic from "next/dynamic";
+import { QRCodeSVG } from "qrcode.react";
 
 // Next.js hydration fix: explicitly disable SSR for ReactPlayer to prevent the 'black square' mounting failure.
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
@@ -12,7 +13,11 @@ export default function Home() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [hasPausedForPractice, setHasPausedForPractice] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [clearTrigger, setClearTrigger] = useState(0);
+  const [showQR, setShowQR] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const NETWORK_IP = process.env.NEXT_PUBLIC_LOCAL_IP || "192.168.1.99";
 
   const playerRef = useRef<any>(null);
 
@@ -32,6 +37,7 @@ export default function Home() {
   const handleContinue = () => {
     setHint(null);
     setIsPlaying(true);
+    setClearTrigger(prev => prev + 1);
   };
 
   if (!roomId || !mounted) return null;
@@ -82,47 +88,92 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="w-full flex-1 min-h-0 relative bg-gray-50 flex items-center justify-center p-0">
-          <TutorCanvas
-            roomId={roomId}
-            isPcViewer={true}
-            onHintReceived={(h) => setHint(h)}
-          />
-        </div>
+        {showQR ? (
+          <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-white overflow-y-auto animate-in fade-in duration-300">
+            <h2 className="text-2xl font-extrabold text-gray-800 mb-2 mt-2">Connect iPad</h2>
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-1.5 rounded-full font-black tracking-widest text-sm mb-6 shadow-md border border-indigo-300">
+              ROOM: {roomId}
+            </div>
+            
+            <div className="bg-white p-3 rounded-2xl border-2 border-gray-100 mb-6 shadow-sm w-full max-w-[280px] aspect-square flex items-center justify-center">
+              <QRCodeSVG 
+                value={`http://${NETWORK_IP}:3000/draw?room=${roomId}`} 
+                size={800} 
+                className="w-full h-auto max-w-full"
+                level="H" 
+              />
+            </div>
 
-        <div className="shrink-0 h-64 bg-white border-t border-gray-200 shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.03)] z-30 flex flex-col p-6 relative">
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-50"></div>
+            <div className="w-full bg-gray-50 text-gray-500 text-[10px] p-3 rounded-xl break-all border border-gray-200 text-center mb-6 font-medium shadow-inner max-w-[280px]">
+              http://{NETWORK_IP}:3000/draw?room={roomId}
+            </div>
 
-          <h3 className="text-[11px] font-black uppercase tracking-widest text-indigo-500 mb-3 flex items-center">
-            AI Tutor Evaluation
-            {!hint && hasPausedForPractice && <span className="ml-2 w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>}
-          </h3>
-
-          <div className="flex-1 overflow-y-auto mb-5 relative">
-            {hint ? (
-              <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 text-gray-800 font-bold leading-relaxed shadow-inner h-full flex items-center justify-center text-center">
-                {hint}
-              </div>
-            ) : (
-              <div className="h-full border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center px-6 text-center text-gray-400 font-medium">
-                {hasPausedForPractice
-                  ? "AI is securely actively scanning mathematical trajectory parameters asynchronously..."
-                  : "Watch the video until the practice segment stops automatically."}
-              </div>
-            )}
+            <button 
+              onClick={() => setShowQR(false)}
+              className="w-full max-w-[280px] py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold tracking-wide rounded-xl transition-all cursor-pointer shadow-sm active:scale-95"
+            >
+              Back to Whiteboard
+            </button>
           </div>
+        ) : (
+          <>
+            <div className="w-full flex-1 min-h-0 relative bg-gray-50 flex items-center justify-center p-0">
+              <TutorCanvas
+                roomId={roomId}
+                isPcViewer={true}
+                onHintReceived={(h) => setHint(h)}
+                clearTrigger={clearTrigger}
+                onLinkMobileClick={() => setShowQR(true)}
+              />
+            </div>
 
-          <button
-            disabled={!hint || isPlaying}
-            onClick={handleContinue}
-            className={`w-full py-3.5 rounded-xl font-black tracking-wide transition-all shadow-md active:scale-[0.98] ${hint && !isPlaying
-              ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg ring-4 ring-indigo-100"
-              : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none"
-              }`}
-          >
-            Continue Lesson
-          </button>
-        </div>
+            <div className="shrink-0 h-64 bg-white border-t border-gray-200 shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.03)] z-30 flex flex-col p-6 relative">
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-50"></div>
+
+              <h3 className="text-[11px] font-black uppercase tracking-widest text-indigo-500 mb-3 flex items-center">
+                AI Tutor Evaluation
+                {!hint && hasPausedForPractice && <span className="ml-2 w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>}
+              </h3>
+
+              <div className="flex-1 overflow-y-auto mb-5 relative">
+                {hint ? (
+                  <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 text-gray-800 font-bold leading-relaxed shadow-inner h-full flex items-center justify-center text-center">
+                    {hint}
+                  </div>
+                ) : (
+                  <div className="h-full border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center px-6 text-center text-gray-400 font-medium">
+                    {hasPausedForPractice
+                      ? "AI is securely actively scanning mathematical trajectory parameters asynchronously..."
+                      : "Watch the video until the practice segment stops automatically."}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-3 w-full">
+                <button
+                  onClick={() => setHint("Developer Override: Success signal bypassed.")}
+                  disabled={isPlaying}
+                  className={`w-1/3 py-3.5 rounded-xl font-bold tracking-wide transition-all shadow-sm ${
+                    !isPlaying ? "bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200" : "opacity-0 pointer-events-none"
+                  }`}
+                >
+                  Skip AI
+                </button>
+                <button
+                  disabled={!hint || isPlaying}
+                  onClick={handleContinue}
+                  className={`w-2/3 py-3.5 rounded-xl font-black tracking-wide transition-all shadow-md active:scale-[0.98] ${
+                    hint && !isPlaying
+                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg ring-4 ring-indigo-100"
+                      : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none"
+                    }`}
+                >
+                  Continue Lesson
+                </button>
+              </div>
+            </div>
+          </>
+        )}
 
       </div>
     </main>

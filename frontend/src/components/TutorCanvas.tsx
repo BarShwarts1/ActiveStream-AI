@@ -3,22 +3,22 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { ReactSketchCanvas, ReactSketchCanvasRef } from "react-sketch-canvas";
 import { Eraser, Pen, Trash2, Smartphone } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { QRCodeSVG } from "qrcode.react";
 
 interface TutorCanvasProps {
   roomId: string;
   isPcViewer?: boolean;
   onHintReceived?: (hint: string) => void;
+  clearTrigger?: number;
+  onLinkMobileClick?: () => void;
 }
 
-export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived }: TutorCanvasProps) {
+export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived, clearTrigger, onLinkMobileClick }: TutorCanvasProps) {
   const canvasRef = useRef<ReactSketchCanvasRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
   const [isEraser, setIsEraser] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [showQrModal, setShowQrModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -41,12 +41,19 @@ export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived
   };
 
   useEffect(() => {
+    setMounted(true);
     connectWebSocket();
     return () => {
       if (wsRef.current) wsRef.current.close();
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
     };
   }, [roomId]);
+
+  useEffect(() => {
+    if (clearTrigger && clearTrigger > 0) {
+      clearCanvas();
+    }
+  }, [clearTrigger]);
 
   const connectWebSocket = useCallback(() => {
     if (!roomId) return;
@@ -199,7 +206,7 @@ export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived
           <>
             <div className="w-px h-5 bg-gray-200 mx-2 hidden sm:block" />
             <button 
-              onClick={() => setShowQrModal(true)} 
+              onClick={onLinkMobileClick} 
               className="flex items-center space-x-1.5 md:space-x-2 px-3 md:px-4 py-1.5 md:py-2 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100 rounded-full transition-all font-bold tracking-wide border border-indigo-100 ml-auto hidden sm:flex"
             >
               <Smartphone size={16} />
@@ -209,47 +216,7 @@ export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived
         )}
       </div>
 
-      <AnimatePresence>
-        {showQrModal && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-md"
-            onClick={() => setShowQrModal(false)}
-          >
-            <motion.div 
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm border border-gray-100 relative overflow-hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-indigo-500 to-purple-500" />
-              
-              <h2 className="text-2xl font-extrabold text-gray-800 mb-2 mt-2">Connect iPad</h2>
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-1.5 rounded-full font-black tracking-widest text-sm mb-6 shadow-md border border-indigo-300">
-                ROOM: {roomId}
-              </div>
-              
-              <div className="bg-white p-3 rounded-2xl border-2 border-gray-100 mb-6 shadow-sm">
-                <QRCodeSVG value={`http://${NETWORK_IP}:3000/draw?room=${roomId}`} size={220} level="H" />
-              </div>
 
-              <div className="w-full bg-gray-50 text-gray-500 text-[10px] p-3 rounded-xl break-all border border-gray-200 text-center mb-6 font-medium shadow-inner">
-                http://{NETWORK_IP}:3000/draw?room={roomId}
-              </div>
-
-              <button 
-                onClick={() => setShowQrModal(false)}
-                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold tracking-wide rounded-xl transition-all cursor-pointer shadow-sm active:scale-95"
-              >
-                Close Window
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Pristine 16:9 100vh lock perfectly preventing mobile stretching bugs organically implicitly correctly optimally! */}
       <div className="flex-1 w-full bg-gray-100 flex items-center justify-center p-2 sm:p-4 overflow-hidden relative touch-none">
