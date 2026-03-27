@@ -60,7 +60,7 @@ async def websocket_tutor(websocket: WebSocket, lesson_id: str):
                 
                 logger.info(f"[{msg_type.upper()} UPDATE] | Received from: {device_type.upper()} | Room: {lesson_id}")
                 
-                if msg_type in ["paths", "stroke", "clear", "evaluate_canvas", "sync_prompt"]:
+                if msg_type in ["paths", "stroke", "clear", "evaluate_canvas", "sync_prompt", "chat_message"]:
                     # Hybrid Multi-Node Relay Pattern
                     if msg_type in ["stroke", "paths", "sync_prompt", "clear"]:
                         await manager.broadcast(data, lesson_id, exclude=websocket)
@@ -85,6 +85,20 @@ async def websocket_tutor(websocket: WebSocket, lesson_id: str):
                                 await manager.broadcast(hint_msg, lesson_id)
                             except json.JSONDecodeError:
                                 logger.error(f"Gemini returned invalid JSON: {reply_text}")
+
+                    elif msg_type == "chat_message":
+                        text = msg.get("text", "")
+                        timestamp = msg.get("timestamp", 0)
+                        
+                        logger.info(f"Processing chat message at {timestamp}s...")
+                        reply_text = await gemini_service.chat(text, lesson_id, float(timestamp))
+                        
+                        import json
+                        chat_res = json.dumps({
+                            "type": "chat_response",
+                            "text": reply_text
+                        })
+                        await websocket.send_text(chat_res)
                         
             except json.JSONDecodeError:
                 logger.error(f"Received non-JSON message in room {lesson_id}, ignoring payload.")

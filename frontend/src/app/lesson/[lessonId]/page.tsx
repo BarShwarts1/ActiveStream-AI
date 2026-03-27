@@ -25,6 +25,11 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
   const [showQR, setShowQR] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  const chatWsRef = useRef<WebSocket | null>(null);
+  const [chatMessages, setChatMessages] = useState<{ sender: 'user' | 'ai', text: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   const [lessonData, setLessonData] = useState<any>(null);
   const [smartStops, setSmartStops] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,6 +38,24 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
 
   const playerRef = useRef<any>(null);
   
+  useEffect(() => {
+    const ws = new WebSocket(`ws://${NETWORK_IP}:8000/ws/tutor/${lessonId}`);
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "chat_response") {
+          setChatMessages(prev => [...prev, { sender: 'ai', text: msg.text }]);
+        }
+      } catch (e) {}
+    };
+    chatWsRef.current = ws;
+    return () => ws.close();
+  }, [lessonId, NETWORK_IP]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
   useEffect(() => {
     setMounted(true);
     
@@ -103,10 +126,24 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
     
     setHasPausedForPractice(false);
     
-    // Hard micro-flush forcing absolute state determinism structurally optimally safely smoothly cleanly identically precisely flawlessly.
     setTimeout(() => {
         setIsPlaying(true);
     }, 50);
+  };
+
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !chatWsRef.current) return;
+    const time = playerRef.current?.getCurrentTime() || 0;
+    
+    setChatMessages(prev => [...prev, { sender: 'user', text: chatInput }]);
+    
+    chatWsRef.current.send(JSON.stringify({
+      type: "chat_message",
+      text: chatInput,
+      timestamp: time
+    }));
+    setChatInput("");
   };
 
   if (!mounted) return null;
@@ -131,7 +168,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
 
   return (
     <main className="w-full h-screen overflow-hidden bg-gray-50 flex flex-col md:flex-row">
-      <div className="w-full md:w-[65%] h-[40vh] md:h-full relative bg-gray-950 flex flex-col items-center justify-center border-r border-gray-800 shadow-2xl z-20 overflow-hidden">
+      <div className="w-full md:w-[55%] h-[40vh] md:h-full relative bg-gray-950 flex flex-col items-center justify-center border-r border-gray-800 shadow-2xl z-20 overflow-hidden">
 
         {!isPlaying && hasPausedForPractice && (
           <div className="absolute inset-0 z-10 bg-gray-900/80 flex flex-col items-center justify-center p-8 text-center backdrop-blur-xl">
@@ -161,7 +198,46 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
         </div>
       </div>
 
-      <div className="w-full md:w-[35%] h-[60vh] md:h-full bg-white flex flex-col relative z-10 overflow-hidden shadow-[-10px_0_30px_rgba(0,0,0,0.03)]">
+      <div className="w-full md:w-[20%] h-[30vh] md:h-full bg-white border-r border-gray-200 flex flex-col relative z-15 shadow-inner">
+        <div className="bg-indigo-50 border-b border-indigo-100 px-4 py-3 shrink-0">
+          <h3 className="text-sm font-black text-indigo-800 tracking-wide flex items-center">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
+            Hebrew AI Chat
+          </h3>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
+          {chatMessages.length === 0 && (
+            <div className="text-xs text-center text-gray-400 font-medium mt-10">
+              Ask a question about the video...
+            </div>
+          )}
+          {chatMessages.map((m, i) => (
+            <div key={i} className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}>
+              <div className={`px-3 py-2 rounded-2xl max-w-[90%] text-sm ${
+                m.sender === 'user' ? "bg-indigo-600 text-white rounded-br-none" : "bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm font-medium"
+              }`} dir={m.sender === 'user' ? "auto" : "rtl"}>
+                {m.text}
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+        <form onSubmit={handleChatSubmit} className="p-3 bg-white border-t border-gray-200 shrink-0 flex gap-2">
+          <input
+            type="text"
+            dir="auto"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder="שאל שאלה..."
+            className="flex-1 min-w-0 bg-gray-100 border-transparent rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+          />
+          <button type="submit" disabled={!chatInput.trim()} className="bg-indigo-600 text-white px-3 py-2 rounded-xl font-bold disabled:opacity-50 text-sm">
+            Send
+          </button>
+        </form>
+      </div>
+
+      <div className="w-full md:w-[25%] h-[60vh] md:h-full bg-white flex flex-col relative z-10 overflow-hidden shadow-[-10px_0_30px_rgba(0,0,0,0.03)]">
 
         <div className="bg-white border-b border-gray-100 px-6 py-4 shrink-0 shadow-sm z-20 flex justify-between items-center">
           <div className="flex flex-col">

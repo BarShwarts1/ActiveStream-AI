@@ -1,4 +1,6 @@
+import os
 import httpx
+from supabase import create_client, Client
 from app.core.config import settings
 import logging
 import base64
@@ -10,6 +12,13 @@ class GeminiService:
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
         
+        sb_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or os.getenv("SUPABASE_URL")
+        sb_key = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
+        if sb_url and sb_key:
+            self.supabase: Client = create_client(sb_url, sb_key)
+        else:
+            self.supabase = None
+        
         self.system_prompt = (
             "You are a Socratic AI Tutor. NEVER give the direct answer. Analyze the student's "
             "whiteboard drawing against the prompt. If correct, status is 'success' and message "
@@ -17,18 +26,97 @@ class GeminiService:
             "encouraging hint to guide them. Return strictly JSON."
         )
         
+        self.chat_system_prompt = (
+            "אתה עוזר הוראה חכם. ענה על שאלת התלמיד בהסתמך רק על תמלול השיעור המצורף. "
+            "אם המידע לא מופיע בתמלול, ציין זאת בעדינות. ענה בעברית."
+        )
+        
         # Bypassing the Python 3.8 `google-generativeai` package limitation (which purely demands Python 3.9+)
         # We route natively via REST explicitly wrapping the exact identical parameters natively perfectly securely!
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.api_key}"
         logger.info("Gemini Service initialized with gemini-2.5-flash via native async REST explicitly handling Py3.8 constraints optimally.")
 
-    async def evaluate(self, base64_image: str, prompt: str) -> str:
+    async def get_rag_context(self, lesson_id: str, timestamp: float) -> str:
+        if not self.supabase or timestamp <= 0:
+            return ""
+        try:
+            start_window = max(0, timestamp - 180)
+            response = self.supabase.table("lesson_transcripts") \
+                .select("content, start_time") \
+                .eq("lesson_id", lesson_id) \
+                .gte("start_time", start_window) \
+                .lte("end_time", timestamp) \
+                .order("start_time") \
+                .execute()
+                
+            if response.data:
+                return " ".join([row["content"] for row in response.data])
+            return ""
+        except Exception as e:
+            logger.error(f"Error fetching Chat RAG context: {e}")
+            return ""
+
+    async def chat(self, text: str, lesson_id: str, timestamp: float) -> str:
+        context_str = await self.get_rag_context(lesson_id, timestamp)
+        full_prompt = f"Transcript Context: [{context_str}]\n\nStudent Question: {text}"
+        
+        payload = {
+            "system_instruction": {"parts": [{"text": self.chat_system_prompt}]},
+            "contents": [{"parts": [{"text": full_prompt}]}]
+        }
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(self.url, json=payload, timeout=20.0)
+                response.raise_for_status()
+                data = response.json()
+                
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        return parts[0].get("text", "").strip()
+                return "מצטער, לא הבנתי. נסה שוב."
+        except Exception as e:
+            logger.error(f"Chat API Error: {e}")
+            return "אירעה שגיאה. נסה שוב מאוחר יותר."
+
+    async def get_context(self, lesson_id: str, current_time: float) -> str:
+        if not self.supabase or current_time <= 0:
+            return ""
+        try:
+            start_window = max(0, current_time - 120)
+            
+            response = self.supabase.table("lesson_transcripts") \
+                .select("content, start_time") \
+                .eq("lesson_id", lesson_id) \
+                .gte("start_time", start_window) \
+                .lte("end_time", current_time) \
+                .order("start_time") \
+                .execute()
+                
+            if response.data:
+                transcript_parts = [row["content"] for row in response.data]
+                return " ".join(transcript_parts)
+            return ""
+        except Exception as e:
+            logger.error(f"Error fetching RAG context: {e}")
+            return ""
+
+    async def evaluate(self, base64_image: str, prompt: str, lesson_id: str = None, current_time: float = 0) -> str:
         try:
             # Clean Base64 string for efficient data transmission natively structurally gracefully
             if "," in base64_image:
                 base64_image = base64_image.split(",", 1)[1]
                 
-            full_prompt = f"Current Prompt to solve: {prompt}"
+            context_str = ""
+            if lesson_id and current_time > 0:
+                context_str = await self.get_context(lesson_id, current_time)
+                
+            if context_str:
+                full_prompt = f"Context from Video: [{context_str}].\n\nBased on this specific part of the lecture, evaluate the student's drawing against this prompt: {prompt}"
+            else:
+                full_prompt = f"Current Prompt to solve: {prompt}"
             
             # Formulating the exact native SDK parameters cleanly purely elegantly naturally structurally 
             payload = {
