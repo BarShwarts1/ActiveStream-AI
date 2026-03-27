@@ -37,20 +37,27 @@ class GeminiService:
         logger.info("Gemini Service initialized with gemini-2.5-flash via native async REST explicitly handling Py3.8 constraints optimally.")
 
     async def get_rag_context(self, lesson_id: str, timestamp: float) -> str:
-        if not self.supabase or timestamp <= 0:
+        if not self.supabase:
             return ""
         try:
             start_window = max(0, timestamp - 180)
+            # Ensure early timestamps catch the first few chunks by extending the end window natively
+            end_window = timestamp if timestamp >= 30 else timestamp + 10
+            
             response = self.supabase.table("lesson_transcripts") \
-                .select("content, start_time") \
+                .select("content, start_time, end_time") \
                 .eq("lesson_id", lesson_id) \
                 .gte("start_time", start_window) \
-                .lte("end_time", timestamp) \
+                .lte("start_time", end_window) \
                 .order("start_time") \
                 .execute()
                 
             if response.data:
-                return " ".join([row["content"] for row in response.data])
+                context = " ".join([row["content"] for row in response.data])
+                print(f"Fetched {len(context)} chars for RAG.")
+                return context
+            
+            print("Fetched 0 chars for RAG.")
             return ""
         except Exception as e:
             logger.error(f"Error fetching Chat RAG context: {e}")
@@ -77,8 +84,14 @@ class GeminiService:
                     if parts:
                         return parts[0].get("text", "").strip()
                 return "מצטער, לא הבנתי. נסה שוב."
-        except Exception as e:
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 400:
+                logger.warning(f"Chat API Error 400 - Missing or Invalid API Key: {e}")
+                return "System: API Key missing"
             logger.error(f"Chat API Error: {e}")
+            return "אירעה שגיאה. נסה שוב מאוחר יותר."
+        except Exception as e:
+            logger.error(f"Chat API generic Error: {e}")
             return "אירעה שגיאה. נסה שוב מאוחר יותר."
 
     async def get_context(self, lesson_id: str, current_time: float) -> str:

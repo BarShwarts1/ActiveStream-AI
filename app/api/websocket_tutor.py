@@ -91,9 +91,10 @@ async def websocket_tutor(websocket: WebSocket, lesson_id: str):
                         timestamp = msg.get("timestamp", 0)
                         
                         logger.info(f"Processing chat message at {timestamp}s...")
+                        print(f"DEBUG: Fetching context for lesson {lesson_id} at time {timestamp}")
+                        
                         reply_text = await gemini_service.chat(text, lesson_id, float(timestamp))
                         
-                        import json
                         chat_res = json.dumps({
                             "type": "chat_response",
                             "text": reply_text

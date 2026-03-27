@@ -142,14 +142,16 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim() || !chatWsRef.current) return;
-    const time = playerRef.current?.getCurrentTime() || 0;
+    
+    const activeTime = playerRef.current?.getCurrentTime() || 0;
+    console.log("Client-side timestamp capture:", activeTime);
     
     setChatMessages(prev => [...prev, { sender: 'user', text: chatInput }]);
     
     chatWsRef.current.send(JSON.stringify({
       type: "chat_message",
       text: chatInput,
-      timestamp: time
+      timestamp: Math.floor(activeTime)
     }));
     setChatInput("");
   };
@@ -392,21 +394,24 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleChatSubmit} className="p-4 border-t border-[#1e293b] shrink-0 flex gap-2">
-            <input
-              type="text"
-              dir="auto"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="שאל שאלה..."
-              className="flex-1 min-w-0 bg-[#020617] border border-[#1e293b] rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-            />
-            <button type="submit" disabled={!chatInput.trim()} className="bg-indigo-600 text-white px-4 rounded-xl font-bold disabled:opacity-50 text-sm hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/20">
-              <svg className="w-4 h-4 transform -rotate-90" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-              </svg>
-            </button>
-          </form>
+          <div className="p-4 border-t border-[#1e293b] shrink-0" dir="rtl">
+            <form onSubmit={handleChatSubmit} className="flex flex-row-reverse gap-2">
+              <button type="submit" disabled={!chatInput.trim()} className="bg-indigo-600 text-white px-4 rounded-xl font-bold disabled:opacity-50 text-sm hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/20">
+                <svg className="w-4 h-4 transform -rotate-90" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                </svg>
+              </button>
+              <input
+                type="text"
+                dir="rtl"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit(e as any)}
+                placeholder="שאל שאלה..."
+                className="flex-1 min-w-0 bg-[#020617] border border-[#1e293b] rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              />
+            </form>
+          </div>
 
           <div className="p-4 border-t border-[#1e293b] shrink-0 bg-[#0b1121]">
             <button 
