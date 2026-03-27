@@ -231,18 +231,7 @@ export default function TutorCanvas({ roomId, isPcViewer = false, activePrompt, 
           <Trash2 size={16} />
         </button>
         
-        {isPcViewer && (
-          <>
-            <div className="w-px h-5 bg-gray-200 mx-2 hidden sm:block" />
-            <button 
-              onClick={onLinkMobileClick} 
-              className="flex items-center space-x-1.5 md:space-x-2 px-3 md:px-4 py-1.5 md:py-2 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100 rounded-full transition-all font-bold tracking-wide border border-indigo-100 ml-auto hidden sm:flex"
-            >
-              <Smartphone size={16} />
-              <span className="text-xs md:text-sm">Link Mobile</span>
-            </button>
-          </>
-        )}
+        {/* Link Mobile button relocated to page.tsx Sidebar */}
         {!isPcViewer && currentPrompt && (
           <button 
             onClick={submitEvaluation}
