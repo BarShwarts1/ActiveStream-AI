@@ -60,26 +60,31 @@ async def websocket_tutor(websocket: WebSocket, lesson_id: str):
                 
                 logger.info(f"[{msg_type.upper()} UPDATE] | Received from: {device_type.upper()} | Room: {lesson_id}")
                 
-                if msg_type in ["paths", "stroke", "clear", "image"]:
-                    # Hybrid Multi-Node Relay Pattern safely resolving logic flawlessly 
-                    if msg_type == "stroke" or msg_type == "paths":
-                        await manager.broadcast(data, lesson_id, exclude=websocket)
-                        
-                    elif msg_type == "clear":
+                if msg_type in ["paths", "stroke", "clear", "evaluate_canvas", "sync_prompt"]:
+                    # Hybrid Multi-Node Relay Pattern
+                    if msg_type in ["stroke", "paths", "sync_prompt", "clear"]:
                         await manager.broadcast(data, lesson_id, exclude=websocket)
                     
-                    elif msg_type == "image":
-                        logger.info(f"Parsing Base64 snapshot explicitly handing over natively to Gemini APIs organically...")
+                    elif msg_type == "evaluate_canvas":
+                        logger.info("Evaluating canvas with Gemini natively...")
+                        await manager.broadcast(json.dumps({"type": "ai_evaluating"}), lesson_id)
                         
-                        # Full Restoration: Gemini pipeline activated evaluating genuine Base64 image tokens securely
-                        image_base64 = msg.get("data")
-                        reply_text = await gemini_service.get_tutor_hint(image_base64)
+                        image_base64 = msg.get("image")
+                        prompt_text = msg.get("prompt", "Analyze the drawing.")
+                        reply_text = await gemini_service.evaluate(image_base64, prompt_text)
                         
-                        if reply_text != "EMPTY_RESPONSE":
-                            logger.info(f"Genuine AI Hint evaluated successfully routing out correctly to active listeners.")
-                            hint_msg = json.dumps({"type": "hint", "data": reply_text})
-                            # Deliver natively synchronously identically cleanly functionally perfectly purely uniformly smoothly!
-                            await manager.broadcast(hint_msg, lesson_id)
+                        if reply_text:
+                            logger.info("Genuine AI JSON evaluated successfully.")
+                            try:
+                                parsed = json.loads(reply_text)
+                                hint_msg = json.dumps({
+                                    "type": "ai_feedback", 
+                                    "status": parsed.get("status", "hint"), 
+                                    "message": parsed.get("message", "Could not parse message.")
+                                })
+                                await manager.broadcast(hint_msg, lesson_id)
+                            except json.JSONDecodeError:
+                                logger.error(f"Gemini returned invalid JSON: {reply_text}")
                         
             except json.JSONDecodeError:
                 logger.error(f"Received non-JSON message in room {lesson_id}, ignoring payload.")

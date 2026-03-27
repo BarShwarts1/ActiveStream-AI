@@ -7,13 +7,17 @@ import { Eraser, Pen, Trash2, Smartphone } from "lucide-react";
 interface TutorCanvasProps {
   roomId: string;
   isPcViewer?: boolean;
-  onHintReceived?: (hint: string) => void;
+  activePrompt?: string;
+  onAiFeedbackReceived?: (feedback: {status: string, message: string}) => void;
+  onAiEvaluating?: () => void;
+  submitTrigger?: number;
   clearTrigger?: number;
   onLinkMobileClick?: () => void;
   onDeviceConnected?: () => void;
 }
 
-export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived, clearTrigger, onLinkMobileClick, onDeviceConnected }: TutorCanvasProps) {
+export default function TutorCanvas({ roomId, isPcViewer = false, activePrompt, onAiFeedbackReceived, onAiEvaluating, submitTrigger, clearTrigger, onLinkMobileClick, onDeviceConnected }: TutorCanvasProps) {
+  const [currentPrompt, setCurrentPrompt] = useState<string>("");
   const canvasRef = useRef<ReactSketchCanvasRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -42,6 +46,12 @@ export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived
   };
 
   useEffect(() => {
+    if (isPcViewer && activePrompt && wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "sync_prompt", prompt: activePrompt }));
+    }
+  }, [activePrompt, isPcViewer]);
+
+  useEffect(() => {
     setMounted(true);
     connectWebSocket();
     return () => {
@@ -55,6 +65,12 @@ export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived
       clearCanvas();
     }
   }, [clearTrigger]);
+
+  useEffect(() => {
+    if (submitTrigger && submitTrigger > 0) {
+      submitEvaluation();
+    }
+  }, [submitTrigger]);
 
   const connectWebSocket = useCallback(() => {
     if (!roomId) return;
@@ -96,17 +112,23 @@ export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived
             pathsCacheRef.current = [];
             canvasRef.current?.clearCanvas();
             setTimeout(() => { isIncomingStroke.current = false; }, 50);
-        } else if (msg.type === "hint") {
-            // Decoupled floating animations entirely routing generic string states explicitly to parent environments
-            if (onHintReceived) {
-                onHintReceived(msg.data);
+        } else if (msg.type === "ai_feedback") {
+            if (onAiFeedbackReceived) {
+                onAiFeedbackReceived({ status: msg.status, message: msg.message });
             }
+        } else if (msg.type === "ai_evaluating") {
+            if (onAiEvaluating) onAiEvaluating();
         } else if (msg.type === "device_connected") {
             if (msg.role === "writer") {
                 if (onDeviceConnected) {
                     onDeviceConnected();
                 }
+                if (isPcViewer && activePrompt) {
+                    wsRef.current?.send(JSON.stringify({ type: "sync_prompt", prompt: activePrompt }));
+                }
             }
+        } else if (msg.type === "sync_prompt" && !isPcViewer) {
+            setCurrentPrompt(msg.prompt);
         }
       } catch (err) {}
     };
@@ -119,7 +141,7 @@ export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived
 
     ws.onerror = (err) => ws.close(); 
     wsRef.current = ws;
-  }, [roomId, NETWORK_IP, onHintReceived]);
+  }, [roomId, NETWORK_IP, activePrompt, onAiFeedbackReceived, isPcViewer, onDeviceConnected]);
 
   const handlePointerDown = () => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
@@ -155,19 +177,19 @@ export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived
       }
     }
 
-    idleTimerRef.current = setTimeout(() => {
-      captureAndSend();
-    }, 2000);
   };
 
-  const captureAndSend = async () => {
+  const submitEvaluation = async () => {
     if (!canvasRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     try {
       const base64Image = await canvasRef.current.exportImage("jpeg");
+      let cleanImage = base64Image;
+      if (cleanImage.includes(",")) cleanImage = cleanImage.split(",")[1];
+      
       wsRef.current.send(JSON.stringify({ 
-        type: "image", 
-        device: isPcViewer ? "PC" : "Mobile", 
-        data: base64Image 
+        type: "evaluate_canvas", 
+        image: cleanImage,
+        prompt: currentPrompt 
       }));
     } catch (err) {}
   };
@@ -220,6 +242,14 @@ export default function TutorCanvas({ roomId, isPcViewer = false, onHintReceived
               <span className="text-xs md:text-sm">Link Mobile</span>
             </button>
           </>
+        )}
+        {!isPcViewer && currentPrompt && (
+          <button 
+            onClick={submitEvaluation}
+            className="flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all font-bold tracking-wide shadow-md ml-auto whitespace-nowrap"
+           >
+             <span className="text-[10px] sm:text-xs">Submit Answer</span>
+          </button>
         )}
       </div>
 

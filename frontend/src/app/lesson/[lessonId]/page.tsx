@@ -18,8 +18,10 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
   const [activeStop, setActiveStop] = useState<any>(null);
   const [completedStops, setCompletedStops] = useState<Set<string>>(new Set());
 
-  const [hint, setHint] = useState<string | null>(null);
+  const [aiFeedback, setAiFeedback] = useState<{status: string, message: string} | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
   const [clearTrigger, setClearTrigger] = useState(0);
+  const [submitTrigger, setSubmitTrigger] = useState(0);
   const [showQR, setShowQR] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -86,7 +88,8 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
   };
 
   const handleContinue = () => {
-    setHint(null);
+    setAiFeedback(null);
+    setIsEvaluating(false);
     setClearTrigger(prev => prev + 1);
     
     if (activeStop) {
@@ -177,7 +180,13 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
           <TutorCanvas
             roomId={lessonId}
             isPcViewer={true}
-            onHintReceived={(h) => setHint(h)}
+            activePrompt={activeStop?.prompt_text}
+            submitTrigger={submitTrigger}
+            onAiEvaluating={() => setIsEvaluating(true)}
+            onAiFeedbackReceived={(feedback) => {
+              setAiFeedback(feedback);
+              setIsEvaluating(false);
+            }}
             clearTrigger={clearTrigger}
             onLinkMobileClick={() => setShowQR(true)}
             onDeviceConnected={() => setShowQR(false)}
@@ -189,18 +198,31 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
 
           <h3 className="text-[11px] font-black uppercase tracking-widest text-indigo-500 mb-3 flex items-center">
             AI Tutor Evaluation
-            {!hint && hasPausedForPractice && <span className="ml-2 w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>}
+            {!aiFeedback && hasPausedForPractice && <span className="ml-2 w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>}
           </h3>
 
           <div className="flex-1 overflow-y-auto mb-5 relative">
-            {hint ? (
-              <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 text-gray-800 font-bold leading-relaxed shadow-inner h-full flex items-center justify-center text-center">
-                {hint}
+            {isEvaluating ? (
+              <div className="border rounded-2xl p-5 font-bold leading-relaxed shadow-inner h-full flex flex-col items-center justify-center text-center bg-indigo-50/50 border-indigo-200 text-indigo-800">
+                <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent animate-spin rounded-full mb-3"></div>
+                <span className="uppercase text-[10px] tracking-widest font-black text-indigo-500 mb-1">Evaluating</span>
+                <p className="text-xs mt-1 opacity-80 font-medium">Waiting for AI sync...</p>
+              </div>
+            ) : aiFeedback ? (
+              <div className={`border rounded-2xl p-5 font-bold leading-relaxed shadow-inner h-full flex flex-col items-center justify-center text-center ${
+                  aiFeedback.status === "success" 
+                    ? "bg-emerald-50/50 border-emerald-200 text-emerald-800" 
+                    : "bg-indigo-50/50 border-indigo-200 text-indigo-800"
+                }`}>
+                <span className={`uppercase text-[10px] tracking-widest mb-2 font-black ${aiFeedback.status === 'success' ? 'text-emerald-500' : 'text-indigo-400'}`}>
+                   {aiFeedback.status === "success" ? "Perfect!" : "Hint"}
+                </span>
+                <p className="text-sm">{aiFeedback.message}</p>
               </div>
             ) : (
               <div className="h-full border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center px-6 text-center text-gray-400 font-medium">
                 {hasPausedForPractice
-                  ? "AI is securely actively scanning mathematical trajectory parameters asynchronously..."
+                  ? `Prompt: "${activeStop?.prompt_text}"`
                   : "Watch the video until the practice segment stops automatically."}
               </div>
             )}
@@ -208,21 +230,35 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
 
           <div className="flex space-x-3 w-full">
             <button
-              onClick={() => setHint("Developer Override: Success signal bypassed.")}
+              onClick={() => setAiFeedback({status: "success", message: "Developer Override: Success signal bypassed."})}
               disabled={isPlaying}
-              className={`w-1/3 py-3.5 rounded-xl font-bold tracking-wide transition-all shadow-sm ${
+              className={`w-1/4 px-2 py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-wide transition-all shadow-sm ${
                 !isPlaying ? "bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200" : "opacity-0 pointer-events-none"
               }`}
             >
               Skip AI
             </button>
             <button
-              disabled={!hint || isPlaying}
+              onClick={() => {
+                setIsEvaluating(true);
+                setSubmitTrigger(prev => prev + 1);
+              }}
+              disabled={isPlaying || aiFeedback?.status === "success" || isEvaluating}
+              className={`w-1/4 px-2 py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-wide transition-all shadow-sm whitespace-nowrap overflow-hidden text-ellipsis ${
+                !isPlaying && aiFeedback?.status !== "success" && !isEvaluating
+                  ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none pointer-events-none"
+              }`}
+            >
+              Submit PC
+            </button>
+            <button
+              disabled={aiFeedback?.status !== "success" || isPlaying}
               onClick={handleContinue}
-              className={`w-2/3 py-3.5 rounded-xl font-black tracking-wide transition-all shadow-md active:scale-[0.98] ${
-                hint && !isPlaying
-                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg ring-4 ring-indigo-100"
-                  : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none"
+              className={`w-1/2 py-3.5 px-2 rounded-xl font-black tracking-wide text-xs transition-all shadow-md active:scale-[0.98] ${
+                aiFeedback?.status === "success" && !isPlaying
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 hover:shadow-lg ring-4 ring-emerald-100"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none pointer-events-none"
                 }`}
             >
               Continue Lesson
