@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/lib/supabaseClient";
 
-const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
+const ReactPlayer = dynamic<any>(() => import("react-player"), { ssr: false });
 
 export default function LessonPage({ params }: { params: { lessonId: string } }) {
   const { lessonId } = params;
@@ -38,6 +38,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
   const NETWORK_IP = process.env.NEXT_PUBLIC_LOCAL_IP || "192.168.1.99";
 
   const playerRef = useRef<any>(null);
+  const latestTimeRef = useRef<number>(0);
   
   useEffect(() => {
     if (hasPausedForPractice) {
@@ -143,15 +144,32 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
     e.preventDefault();
     if (!chatInput.trim() || !chatWsRef.current) return;
     
-    const activeTime = playerRef.current?.getCurrentTime() || 0;
-    console.log("Client-side timestamp capture:", activeTime);
+    // 1. Try to get a fresh reading directly from the player instance (Active)
+    const internalPlayer = playerRef.current?.getInternalPlayer();
+    let activeTime = 0;
+
+    try {
+      if (internalPlayer && typeof internalPlayer.getCurrentTime === 'function') {
+        activeTime = internalPlayer.getCurrentTime();
+      } else if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+        activeTime = playerRef.current.getCurrentTime();
+      }
+    } catch (e) {
+      console.warn("Direct capture failed, falling back to ref");
+    }
+
+    // 2. Final Fallback (The Passive Ref)
+    const finalTime = (activeTime && !isNaN(activeTime)) ? activeTime : latestTimeRef.current;
+    const timestamp = Math.floor(finalTime || 0);
+
+    console.log("🚀 FINAL SYNCED TIMESTAMP:", timestamp);
     
     setChatMessages(prev => [...prev, { sender: 'user', text: chatInput }]);
     
     chatWsRef.current.send(JSON.stringify({
       type: "chat_message",
       text: chatInput,
-      timestamp: Math.floor(activeTime)
+      timestamp: timestamp
     }));
     setChatInput("");
   };
@@ -212,6 +230,24 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
               width="100%"
               height="100%"
               onTimeUpdate={handleTimeUpdate}
+              progressInterval={200}
+              onProgress={(e: any) => {
+                let time = 0;
+                const target = e.target || e.currentTarget;
+                
+                if (target) {
+                  time = target.currentTime || 
+                         (typeof target.getCurrentTime === 'function' ? target.getCurrentTime() : 0);
+                }
+
+                if (!time && e.playedSeconds) {
+                  time = e.playedSeconds;
+                }
+
+                if (typeof time === 'number' && !isNaN(time)) {
+                  latestTimeRef.current = time;
+                }
+              }}
             />
           </div>
 
