@@ -4,43 +4,127 @@ import React, { useState, useEffect, useRef } from "react";
 import TutorCanvas from "@/components/TutorCanvas";
 import dynamic from "next/dynamic";
 import { QRCodeSVG } from "qrcode.react";
+import { supabase } from "@/lib/supabaseClient";
 
 // Next.js hydration fix: explicitly disable SSR for ReactPlayer to prevent the 'black square' mounting failure.
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 
-export default function Home() {
-  const [roomId, setRoomId] = useState<string>("");
+export default function LessonPage({ params }: { params: { lessonId: string } }) {
+  const { lessonId } = params;
+
   const [isPlaying, setIsPlaying] = useState(true);
   const [hasPausedForPractice, setHasPausedForPractice] = useState(false);
+  
+  const [activeStop, setActiveStop] = useState<any>(null);
+  const [completedStops, setCompletedStops] = useState<Set<string>>(new Set());
+
   const [hint, setHint] = useState<string | null>(null);
   const [clearTrigger, setClearTrigger] = useState(0);
   const [showQR, setShowQR] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  const [lessonData, setLessonData] = useState<any>(null);
+  const [smartStops, setSmartStops] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const NETWORK_IP = process.env.NEXT_PUBLIC_LOCAL_IP || "192.168.1.99";
 
   const playerRef = useRef<any>(null);
-
+  
   useEffect(() => {
-    setRoomId(Math.random().toString(36).substring(2, 6).toUpperCase());
     setMounted(true);
-  }, []);
+    
+    const fetchLessonData = async () => {
+      try {
+        const { data: lesson, error: lessonError } = await supabase
+          .from('lessons')
+          .select('*')
+          .eq('id', lessonId)
+          .single();
+
+        if (lessonError) {
+            console.error(lessonError);
+            setIsLoading(false);
+            return;
+        }
+
+        const { data: stops, error: stopsError } = await supabase
+          .from('smart_stops')
+          .select('*')
+          .eq('lesson_id', lessonId)
+          .order('timestamp_seconds', { ascending: true });
+
+        if (!stopsError && stops) {
+            setSmartStops(stops);
+        }
+        
+        setLessonData(lesson);
+      } catch (err) {
+        console.error("Failed to load lesson data", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchLessonData();
+  }, [lessonId]);
 
   const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    // Fire precisely at 45 seconds allowing users to physically draw identically.
-    if (!hasPausedForPractice && e.currentTarget.currentTime >= 45) {
+    if (!isPlaying) return;
+    const currentTime = e.currentTarget.currentTime;
+    
+    // Dynamic Smart Stop trigger bounds checking continuously exactly universally successfully safely explicitly seamlessly
+    const stopToTrigger = smartStops.find(
+      (stop) => currentTime >= stop.timestamp_seconds && currentTime <= stop.timestamp_seconds + 3 && !completedStops.has(stop.id)
+    );
+
+    if (stopToTrigger && !hasPausedForPractice) {
       setIsPlaying(false);
+      setActiveStop(stopToTrigger);
       setHasPausedForPractice(true);
     }
   };
 
   const handleContinue = () => {
     setHint(null);
-    setIsPlaying(true);
     setClearTrigger(prev => prev + 1);
+    
+    if (activeStop) {
+      setCompletedStops(prev => {
+        const next = new Set(prev);
+        next.add(activeStop.id);
+        return next;
+      });
+      setActiveStop(null);
+    }
+    
+    setHasPausedForPractice(false);
+    
+    // Hard micro-flush forcing absolute state determinism structurally optimally safely smoothly cleanly identically precisely flawlessly.
+    setTimeout(() => {
+        setIsPlaying(true);
+    }, 50);
   };
 
-  if (!roomId || !mounted) return null;
+  if (!mounted) return null;
+
+  if (isLoading) {
+    return (
+      <main className="w-full h-screen flex flex-col items-center justify-center bg-gray-50 text-indigo-600">
+        <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent animate-spin rounded-full mb-4"></div>
+        <p className="text-sm font-bold tracking-widest uppercase">Loading Virtual Session...</p>
+      </main>
+    );
+  }
+
+  if (!lessonData) {
+    return (
+      <main className="w-full h-screen flex flex-col items-center justify-center bg-gray-50 text-center px-4">
+        <h1 className="text-3xl font-black text-gray-800 mb-2">Lesson Not Found</h1>
+        <p className="text-lg text-gray-500 font-medium">This session does not exist or has been removed.</p>
+      </main>
+    );
+  }
 
   return (
     <main className="w-full h-screen overflow-hidden bg-gray-50 flex flex-col md:flex-row">
@@ -48,7 +132,9 @@ export default function Home() {
 
         {!isPlaying && hasPausedForPractice && (
           <div className="absolute inset-0 z-10 bg-gray-900/80 flex flex-col items-center justify-center p-8 text-center backdrop-blur-xl">
-            <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 mb-6 tracking-tight">Time to Practice!</h2>
+            <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 mb-6 tracking-tight">
+              {activeStop?.prompt_text || "Time to Practice!"}
+            </h2>
             <p className="text-lg md:text-2xl text-gray-300 mb-10 max-w-2xl font-medium leading-relaxed">
               Grab your connected iPad or use your mouse to solve the exact steps presented over on the interactive whiteboard.
             </p>
@@ -59,11 +145,10 @@ export default function Home() {
           </div>
         )}
 
-        {/* The dynamic wrapper organically mounts pure structural outputs bypassing Next.js DOM execution loops safely. */}
         <div className="w-full h-full relative">
           <ReactPlayer
             ref={playerRef}
-            src="https://www.youtube.com/watch?v=duOh5QX1lJA&t=1s"
+            src={lessonData.video_url}
             playing={isPlaying}
             controls={true}
             width="100%"
@@ -81,16 +166,16 @@ export default function Home() {
               <span className="bg-gradient-to-tr from-indigo-600 to-purple-600 w-2.5 h-6 rounded-full inline-block shadow-sm"></span>
               <span>ActiveStream AI</span>
             </h1>
-            <p className="text-[11px] text-gray-400 mt-0.5 font-bold uppercase tracking-widest pl-5">Virtual Session</p>
+            <p className="text-[11px] text-gray-400 mt-0.5 font-bold uppercase tracking-widest pl-5">{lessonData.title}</p>
           </div>
-          <div className="bg-gray-100 text-indigo-600 px-3 py-1 rounded-lg font-black text-sm tracking-widest border border-gray-200">
-            {roomId}
+          <div className="bg-gray-100 text-indigo-600 px-3 py-1 rounded-lg font-black text-xs tracking-widest border border-gray-200">
+            {lessonId}
           </div>
         </div>
 
         <div className={`w-full flex-1 min-h-0 relative bg-gray-50 flex items-center justify-center p-0 ${showQR ? 'hidden' : 'flex'}`}>
           <TutorCanvas
-            roomId={roomId}
+            roomId={lessonId}
             isPcViewer={true}
             onHintReceived={(h) => setHint(h)}
             clearTrigger={clearTrigger}
@@ -149,12 +234,12 @@ export default function Home() {
           <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-white overflow-y-auto animate-in fade-in duration-300">
             <h2 className="text-2xl font-extrabold text-gray-800 mb-2 mt-2">Connect iPad</h2>
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-1.5 rounded-full font-black tracking-widest text-sm mb-6 shadow-md border border-indigo-300">
-              ROOM: {roomId}
+              LESSON: {lessonId}
             </div>
             
             <div className="bg-white p-3 rounded-2xl border-2 border-gray-100 mb-6 shadow-sm w-full max-w-[280px] aspect-square flex items-center justify-center">
               <QRCodeSVG 
-                value={`http://${NETWORK_IP}:3000/draw?room=${roomId}`} 
+                value={`http://${NETWORK_IP}:3000/lesson/${lessonId}/draw`} 
                 size={800} 
                 className="w-full h-auto max-w-full"
                 level="H" 
@@ -162,7 +247,7 @@ export default function Home() {
             </div>
 
             <div className="w-full bg-gray-50 text-gray-500 text-[10px] p-3 rounded-xl break-all border border-gray-200 text-center mb-6 font-medium shadow-inner max-w-[280px]">
-              http://{NETWORK_IP}:3000/draw?room={roomId}
+              http://{NETWORK_IP}:3000/lesson/{lessonId}/draw
             </div>
 
             <button 

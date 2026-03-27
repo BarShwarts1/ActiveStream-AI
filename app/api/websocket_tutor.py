@@ -45,9 +45,9 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@router.websocket("/ws/tutor/{room_id}")
-async def websocket_tutor(websocket: WebSocket, room_id: str):
-    await manager.connect(websocket, room_id)
+@router.websocket("/ws/tutor/{lesson_id}")
+async def websocket_tutor(websocket: WebSocket, lesson_id: str):
+    await manager.connect(websocket, lesson_id)
     
     try:
         while True:
@@ -58,15 +58,15 @@ async def websocket_tutor(websocket: WebSocket, room_id: str):
                 msg_type = msg.get("type")
                 device_type = msg.get("device", "Unknown Node")
                 
-                logger.info(f"[{msg_type.upper()} UPDATE] | Received from: {device_type.upper()} | Room: {room_id}")
+                logger.info(f"[{msg_type.upper()} UPDATE] | Received from: {device_type.upper()} | Room: {lesson_id}")
                 
                 if msg_type in ["paths", "stroke", "clear", "image"]:
                     # Hybrid Multi-Node Relay Pattern safely resolving logic flawlessly 
                     if msg_type == "stroke" or msg_type == "paths":
-                        await manager.broadcast(data, room_id, exclude=websocket)
+                        await manager.broadcast(data, lesson_id, exclude=websocket)
                         
                     elif msg_type == "clear":
-                        await manager.broadcast(data, room_id, exclude=websocket)
+                        await manager.broadcast(data, lesson_id, exclude=websocket)
                     
                     elif msg_type == "image":
                         logger.info(f"Parsing Base64 snapshot explicitly handing over natively to Gemini APIs organically...")
@@ -79,12 +79,12 @@ async def websocket_tutor(websocket: WebSocket, room_id: str):
                             logger.info(f"Genuine AI Hint evaluated successfully routing out correctly to active listeners.")
                             hint_msg = json.dumps({"type": "hint", "data": reply_text})
                             # Deliver natively synchronously identically cleanly functionally perfectly purely uniformly smoothly!
-                            await manager.broadcast(hint_msg, room_id)
+                            await manager.broadcast(hint_msg, lesson_id)
                         
             except json.JSONDecodeError:
-                logger.error(f"Received non-JSON message in room {room_id}, ignoring payload.")
+                logger.error(f"Received non-JSON message in room {lesson_id}, ignoring payload.")
             except Exception as e:
-                logger.error(f"Failed to process generic WS payload for room {room_id}: {e}")
+                logger.error(f"Failed to process generic WS payload for room {lesson_id}: {e}")
                 
     except WebSocketDisconnect:
-        manager.disconnect(websocket, room_id)
+        manager.disconnect(websocket, lesson_id)
