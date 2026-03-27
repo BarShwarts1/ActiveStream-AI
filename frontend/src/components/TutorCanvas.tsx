@@ -8,6 +8,7 @@ interface TutorCanvasProps {
   roomId: string;
   isPcViewer?: boolean;
   activePrompt?: string;
+  activeTimestamp?: number;
   onAiFeedbackReceived?: (feedback: {status: string, message: string}) => void;
   onAiEvaluating?: () => void;
   submitTrigger?: number;

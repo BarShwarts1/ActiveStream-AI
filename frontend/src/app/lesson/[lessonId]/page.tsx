@@ -40,7 +40,9 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
   const playerRef = useRef<any>(null);
   
   useEffect(() => {
-    setChatMinimized(hasPausedForPractice);
+    if (hasPausedForPractice) {
+      setChatMinimized(true);
+    }
   }, [hasPausedForPractice]);
 
   useEffect(() => {
@@ -127,6 +129,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
     }
     
     setHasPausedForPractice(false);
+    setChatMinimized(false);
     
     setTimeout(() => {
         setIsPlaying(true);
@@ -154,7 +157,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
     return (
       <main className="w-full h-screen flex flex-col items-center justify-center bg-[#020617] text-indigo-500">
         <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent animate-spin rounded-full mb-4"></div>
-        <p className="text-sm font-bold tracking-widest uppercase">Loading Virtual Session...</p>
+        <p className="text-sm font-bold tracking-widest uppercase">Loading...</p>
       </main>
     );
   }
@@ -163,14 +166,16 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
     return (
       <main className="w-full h-screen flex flex-col items-center justify-center bg-[#020617] text-center px-4">
         <h1 className="text-3xl font-black text-white mb-2">Lesson Not Found</h1>
-        <p className="text-lg text-gray-500 font-medium">This session does not exist or has been removed.</p>
+        <p className="text-lg text-gray-500 font-medium">This session does not exist.</p>
       </main>
     );
   }
 
   return (
-    <main className="w-full h-screen overflow-hidden flex bg-[#020617] text-white font-sans">
-      <div className="w-16 md:w-20 bg-[#0f172a] border-r border-[#1e293b] flex flex-col items-center py-6 shrink-0 z-50">
+    <main className="w-full h-screen overflow-hidden flex bg-[#020617] text-white font-sans relative">
+      
+      {/* Left Navigation Sidebar */}
+      <div className="w-16 md:w-20 bg-[#0f172a] border-r border-[#1e293b] flex flex-col items-center py-6 shrink-0 z-40">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 mb-8 shadow-lg shadow-indigo-500/20 flex flex-col items-center justify-center">
           <span className="font-black text-white text-lg">A</span>
         </div>
@@ -188,119 +193,154 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
         </div>
       </div>
 
-      <div className="flex-1 flex relative overflow-hidden bg-[#020617]">
-        <div className={`relative transition-all duration-300 ${chatMinimized ? 'w-full' : 'w-full md:w-[80%]'} h-full flex flex-col`}>
-          <div className="w-full h-full relative">
-            <ReactPlayer
-              ref={playerRef}
-              src={lessonData.video_url}
-              playing={isPlaying}
-              controls={true}
-              width="100%"
-              height="100%"
-              onTimeUpdate={handleTimeUpdate}
-            />
-          </div>
-
-          {hasPausedForPractice && (
-            <div className="absolute inset-0 z-20 bg-[#020617]/90 backdrop-blur-xl flex flex-col md:flex-row p-6 md:p-12 animate-in fade-in duration-500 overflow-y-auto">
+      <div className="flex-1 flex overflow-hidden w-full h-full relative">
+        
+        {/* Main Content Stage */}
+        <div className="flex-1 flex flex-col relative w-full h-full overflow-hidden bg-[#020617] items-center justify-center">
+          
+          {!hasPausedForPractice || isPlaying ? (
+            <div className="w-full h-full relative">
+              <ReactPlayer
+                ref={playerRef}
+                src={lessonData.video_url}
+                playing={isPlaying}
+                controls={true}
+                width="100%"
+                height="100%"
+                onTimeUpdate={handleTimeUpdate}
+              />
+            </div>
+          ) : (
+            <div className="w-full h-full flex flex-col bg-white overflow-hidden relative">
               
-              <div className="w-full md:w-2/3 h-[500px] md:h-full flex flex-col bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200">
-                <div className="bg-gray-50 border-b border-gray-100 px-6 py-4 flex justify-between items-center shrink-0">
-                  <h3 className="font-black text-gray-800 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                    Smart Canvas
-                  </h3>
-                  <span className="text-xs font-bold tracking-widest text-indigo-500 uppercase flex items-center gap-1">
-                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                     </svg>
-                     Live Sync
-                  </span>
-                </div>
-                <div className="flex-1 relative bg-white overflow-hidden">
-                  <TutorCanvas
-                    roomId={lessonId}
-                    isPcViewer={true}
-                    activePrompt={activeStop?.prompt_text}
-                    activeTimestamp={activeStop?.timestamp_seconds}
-                    submitTrigger={submitTrigger}
-                    onAiEvaluating={() => setIsEvaluating(true)}
-                    onAiFeedbackReceived={(feedback) => {
-                      setAiFeedback(feedback);
-                      setIsEvaluating(false);
-                    }}
-                    clearTrigger={clearTrigger}
-                  />
-                </div>
-              </div>
-
-              <div className="w-full md:w-1/3 h-full flex flex-col pl-0 md:pl-8 pt-6 md:pt-0">
-                <h2 className="text-2xl md:text-3xl font-black text-white mb-6 leading-tight flex-1">
-                  {activeStop?.prompt_text}
-                </h2>
-
-                <div className="shrink-0 flex flex-col gap-4">
-                  {aiFeedback ? (
-                    <div className={`p-6 rounded-2xl border backdrop-blur-md ${
-                        aiFeedback.status === "success" 
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
-                          : "bg-indigo-500/10 border-indigo-500/30 text-indigo-400"
-                      }`}>
-                      <span className="uppercase text-[10px] tracking-widest font-black mb-2 block text-white/70">
-                        {aiFeedback.status === "success" ? "Perfect!" : "Hint"}
-                      </span>
-                      <p className="text-sm font-medium">{aiFeedback.message}</p>
+              {/* Tutor Canvas Section - shrinking height depending on aiFeedback */}
+              <div className={`w-full transition-all duration-300 ease-in-out ${aiFeedback ? 'h-[70%]' : 'h-full'} relative bg-gray-50 flex flex-col`}>
+                <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between shrink-0 items-center z-10 shadow-sm">
+                  <div className="flex items-center gap-4">
+                    <h3 className="font-black text-gray-800 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse shadow-lg shadow-indigo-500/50"></span>
+                      Smart Canvas
+                    </h3>
+                    <div className="px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-[10px] font-black tracking-widest text-indigo-600 uppercase">Live Sync</span>
                     </div>
-                  ) : isEvaluating && (
-                    <div className="p-6 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 backdrop-blur-md flex items-center justify-center gap-4 text-indigo-400">
-                      <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent animate-spin rounded-full"></div>
-                      <span className="font-bold text-sm tracking-wide">Waiting for AI sync...</span>
-                    </div>
-                  )}
-
-                  <div className="flex gap-3 w-full">
-                    <button
-                      onClick={() => setAiFeedback({status: "success", message: "Developer Override: Success signal bypassed."})}
-                      className="w-1/3 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wide bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-all border border-white/10"
-                    >
-                      Skip AI
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsEvaluating(true);
-                        setSubmitTrigger(prev => prev + 1);
-                      }}
-                      disabled={aiFeedback?.status === "success" || isEvaluating}
-                      className={`w-1/3 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wide transition-all border ${
-                        aiFeedback?.status !== "success" && !isEvaluating
-                          ? "bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500"
-                          : "bg-white/5 border-white/5 text-white/30 cursor-not-allowed"
-                      }`}
-                    >
-                      Submit
-                    </button>
-                    <button
-                      disabled={aiFeedback?.status !== "success"}
-                      onClick={handleContinue}
-                      className={`w-1/3 py-3.5 rounded-xl font-black text-xs uppercase tracking-wide transition-all shadow-lg ${
-                        aiFeedback?.status === "success"
-                          ? "bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/20"
-                          : "bg-white/5 text-white/30 cursor-not-allowed border border-white/5 shadow-none"
-                        }`}
-                    >
-                      Continue
-                    </button>
+                  </div>
+                  <div className="text-gray-500 font-medium text-sm flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
+                    <span className="text-[10px] uppercase font-black tracking-widest text-indigo-500">Prompt:</span>
+                    <span className="max-w-md truncate text-gray-800 font-bold">{activeStop?.prompt_text}</span>
                   </div>
                 </div>
+
+                <div className="flex-1 relative bg-gray-100 flex flex-col overflow-hidden">
+                  
+                  <div className="flex-1 relative min-h-0 flex items-center justify-center">
+                    <TutorCanvas
+                      roomId={lessonId}
+                      isPcViewer={true}
+                      activePrompt={activeStop?.prompt_text}
+                      activeTimestamp={activeStop?.timestamp_seconds}
+                      submitTrigger={submitTrigger}
+                      onAiEvaluating={() => setIsEvaluating(true)}
+                      onAiFeedbackReceived={(feedback) => {
+                        setAiFeedback(feedback);
+                        setIsEvaluating(false);
+                      }}
+                      clearTrigger={clearTrigger}
+                    />
+                  </div>
+
+                  {/* Pre-Submission Action Bar strictly sibling to the Canvas explicitly eliminating overlay bugs natively natively natively */}
+                  {!aiFeedback && (
+                    <div className="shrink-0 h-16 bg-white border-t border-gray-200 flex items-center justify-end px-6 gap-3 z-20">
+                      <button
+                        onClick={() => setAiFeedback({status: "success", message: "Developer Override: Success signal bypassed. You may continue."})}
+                        className="px-5 py-2 rounded-xl font-bold text-xs uppercase tracking-wider text-gray-500 hover:bg-gray-100 transition-all font-sans"
+                      >
+                        Skip AI
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEvaluating(true);
+                          setSubmitTrigger(prev => prev + 1);
+                        }}
+                        disabled={isEvaluating}
+                        className={`px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all shadow-md flex items-center gap-2 font-sans ${
+                          !isEvaluating
+                            ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                            : "bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none"
+                        }`}
+                      >
+                        {isEvaluating ? (
+                          <>
+                            <div className="w-3.5 h-3.5 border-2 border-gray-400 border-t-transparent animate-spin rounded-full"></div>
+                            Evaluating...
+                          </>
+                        ) : (
+                          "Submit PC"
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Feedback Mode Transition Area */}
+              <div className={`w-full transition-all duration-300 ease-in-out bg-white border-t border-gray-200 overflow-hidden ${aiFeedback ? 'h-[30%]' : 'h-0'}`}>
+                {aiFeedback && (
+                  <div className="w-full h-full flex flex-col p-6 animate-in fade-in duration-500 delay-150">
+                    <div className={`flex-1 p-5 rounded-2xl border ${
+                        aiFeedback.status === "success" 
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+                          : "bg-indigo-50 border-indigo-200 text-indigo-800"
+                      }`}>
+                      <span className={`uppercase text-[11px] tracking-widest font-black mb-2 block ${aiFeedback.status === "success" ? "text-emerald-500" : "text-indigo-500"}`}>
+                        {aiFeedback.status === "success" ? "Perfect!" : "Hint"}
+                      </span>
+                      <p className="text-sm font-medium leading-relaxed">{aiFeedback.message}</p>
+                    </div>
+
+                    <div className="shrink-0 flex items-center justify-end gap-3 mt-4">
+                      <button
+                        disabled={aiFeedback.status === "success"}
+                        onClick={() => setAiFeedback({status: "success", message: "Developer Override: Success signal bypassed."})}
+                        className={`px-5 py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider transition-all font-sans ${
+                          aiFeedback.status !== "success" ? "text-gray-500 hover:bg-gray-100" : "text-gray-300 cursor-not-allowed"
+                        }`}
+                      >
+                        Skip
+                      </button>
+                      <button
+                        disabled={aiFeedback.status !== "success"}
+                        onClick={handleContinue}
+                        className={`px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all shadow-lg flex items-center gap-2 font-sans ${
+                          aiFeedback.status === "success"
+                            ? "bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/30"
+                            : "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+                          }`}
+                      >
+                        Continue Lesson
+                        {aiFeedback.status === "success" && (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 
-          {chatMinimized && (
+          {/* Floating Chat PIP securely bound to the bottom left neutralizing action container conflicts */}
+          {chatMinimized && hasPausedForPractice && (
             <button 
               onClick={() => setChatMinimized(false)}
-              className="absolute bottom-6 right-6 w-14 h-14 bg-indigo-600 rounded-full shadow-2xl flex items-center justify-center hover:bg-indigo-500 transition-all z-30 group overflow-hidden border border-indigo-400/50"
+              className="absolute bottom-6 left-6 w-14 h-14 bg-indigo-600 rounded-full shadow-2xl flex items-center justify-center hover:bg-indigo-500 transition-all z-30 group overflow-hidden border border-indigo-400/50"
             >
               <svg className="w-6 h-6 text-white group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -308,9 +348,11 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
               <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-indigo-600 animate-pulse"></span>
             </button>
           )}
+
         </div>
 
-        <div className={`transition-all duration-300 ease-in-out border-l border-[#1e293b] bg-[#0f172a] flex flex-col z-10 ${chatMinimized ? 'w-0 opacity-0 overflow-hidden' : 'w-full md:w-[20%] min-w-[300px] opacity-100'}`}>
+        {/* Right Chat Sidebar */}
+        <div className={`transition-all duration-300 ease-in-out border-l border-[#1e293b] bg-[#0f172a] flex flex-col h-full z-10 relative ${chatMinimized ? 'w-0 md:w-0 opacity-0 translate-x-full' : 'w-full md:w-[20%] min-w-[300px] opacity-100 translate-x-0'}`}>
           <div className="p-4 md:p-5 border-b border-[#1e293b] flex justify-between items-center shrink-0">
             <h3 className="text-sm font-black text-white tracking-wide flex items-center gap-2">
               <span className="text-indigo-500 bg-indigo-500/10 p-1.5 rounded-lg">
@@ -382,7 +424,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
             </button>
 
             {showQR && (
-              <div className="mt-4 flex flex-col items-center bg-[#020617] border border-[#1e293b] rounded-xl p-4 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-xl">
+              <div className="mt-4 flex flex-col items-center bg-[#020617] border border-[#1e293b] rounded-xl p-4 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-xl z-20">
                 <div className="bg-white p-2 rounded-xl">
                   <QRCodeSVG 
                     value={`http://${NETWORK_IP}:3000/lesson/${lessonId}/draw`} 
@@ -397,6 +439,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
             )}
           </div>
         </div>
+
       </div>
     </main>
   );
