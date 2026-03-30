@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 import httpx
 from supabase import create_client, Client
 from app.core.config import settings
@@ -6,14 +8,22 @@ import logging
 import base64
 import json
 
+env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
+
 logger = logging.getLogger(__name__)
 
 class GeminiService:
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
         
-        sb_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or os.getenv("SUPABASE_URL")
-        sb_key = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
+        sb_url = os.getenv("SUPABASE_URL")
+        sb_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        
+        print(f"📂 ENV CHECK - URL found: {'YES' if sb_url else 'NO'}")
+        print(f"🔑 ENV CHECK - Key found: {'YES' if sb_key else 'NO'}")
+        if sb_url: print(f"📍 URL Start: {sb_url[:15]}...")
+        
         if sb_url and sb_key:
             self.supabase: Client = create_client(sb_url, sb_key)
         else:
@@ -37,35 +47,74 @@ class GeminiService:
         logger.info("Gemini Service initialized with gemini-2.5-flash via native async REST explicitly handling Py3.8 constraints optimally.")
 
     async def get_rag_context(self, lesson_id: str, timestamp: float) -> str:
+        print("🚀🚀🚀 POWER-ON: IF YOU DON'T SEE THIS, I AM IN THE WRONG FILE")
         if not self.supabase:
             return ""
         try:
-            start_window = max(0, timestamp - 180)
-            # Ensure early timestamps catch the first few chunks by extending the end window natively
-            end_window = timestamp if timestamp >= 30 else timestamp + 10
+            print(f"📂 EXECUTION CHECK: Running get_rag_context in gemini_service.py")
+            print(f"📊 DATA TYPES - ID: {type(lesson_id)}, Time: {type(timestamp)}")
             
-            response = self.supabase.table("lesson_transcripts") \
-                .select("content, start_time, end_time") \
-                .eq("lesson_id", lesson_id) \
-                .gte("start_time", start_window) \
-                .lte("start_time", end_window) \
-                .order("start_time") \
-                .execute()
+            # API Key / RLS Check
+            url_check = os.getenv("SUPABASE_URL")
+            key_check = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            print(f"🔑 API Check: URL={url_check[:15]}..., Key={key_check[:15]}...")
+            
+            # Table Existence Check / Global Count
+            try:
+                global_count = self.supabase.table("lesson_transcripts").select("id", count="exact").limit(1).execute()
+                print(f"📊 GLOBAL TABLE COUNT: {global_count.count}")
+            except Exception as e:
+                print(f"🚨 GLOBAL COUNT CRASHED: {str(e)}")
+            
+            print("📡 ATTEMPTING QUERY...")
+            try:
+                # Simplify the query to the absolute basics
+                response = self.supabase.table("lesson_transcripts") \
+                    .select("content, start_time") \
+                    .eq("lesson_id", str(lesson_id)) \
+                    .lte("start_time", float(timestamp)) \
+                    .order("start_time", desc=True) \
+                    .limit(5) \
+                    .execute()
+                print(f"📡 RAW API RESPONSE: {response}")
+            except Exception as e:
+                print(f"🚨 PYTHON CRASHED DURING QUERY: {str(e)}")
+                raise e
                 
             if response.data:
-                context = " ".join([row["content"] for row in response.data])
-                print(f"Fetched {len(context)} chars for RAG.")
+                rows = response.data
+                rows.reverse() # Reverse to chronological order after desc fetch
+                print(f"📊 DATABASE CHECK: Found {len(rows)} segments for lesson {lesson_id}")
+                for i, row in enumerate(rows):
+                    print(f"   - Segment {i}: [{row['start_time']}s] {row['content'][:30]}...")
+                
+                context = " ".join([row["content"] for row in rows])
                 return context
             
-            print("Fetched 0 chars for RAG.")
+            # If response is empty, check ignoring the timestamp
+            temp = self.supabase.table("lesson_transcripts").select("id").eq("lesson_id", str(lesson_id)).limit(1).execute()
+            print(f"🔍 TOTAL ROWS FOR THIS ID: {len(temp.data)}")
+            
             return ""
         except Exception as e:
+            print(f"🚨 RAW SUPABASE ERROR: {e}")
             logger.error(f"Error fetching Chat RAG context: {e}")
             return ""
 
     async def chat(self, text: str, lesson_id: str, timestamp: float) -> str:
         context_str = await self.get_rag_context(lesson_id, timestamp)
         full_prompt = f"Transcript Context: [{context_str}]\n\nStudent Question: {text}"
+        
+        final_prompt_string = f"System: {self.chat_system_prompt}\nContext: {context_str}\nUser: {text}"
+        print("\n" + "🔍" + "="*60)
+        print(f"📍 TIMESTAMP RECEIVED: {timestamp}s")
+        print(f"🕒 RETRIEVAL WINDOW: {max(0, timestamp - 60)}s to {timestamp}s")
+        print("-" * 20)
+        print(f"📄 RAW CONTEXT FROM DATABASE:\n{context_str}")
+        print("-" * 20)
+        print(f"📏 CONTEXT LENGTH: {len(context_str)} chars")
+        print(f"🤖 FINAL SYSTEM PROMPT SENT TO AI:\n{final_prompt_string}")
+        print("="*62 + "\n")
         
         payload = {
             "system_instruction": {"parts": [{"text": self.chat_system_prompt}]},
