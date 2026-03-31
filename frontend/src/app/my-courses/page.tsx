@@ -1,7 +1,7 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
-import { Layers, PlusCircle } from 'lucide-react';
+import { Layers } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import CourseCard from '@/components/CourseCard';
 import CreateCourseButton from '@/components/CreateCourseButton';
@@ -75,16 +75,24 @@ export default async function MyCoursesPage() {
           ))}
 
           {courses?.length === 0 && (
-            <div className="col-span-full py-24 text-center bg-[#0f172a] rounded-3xl border border-[#1e293b] border-dashed">
+            <div className="col-span-full py-24 text-center bg-[#0f172a] rounded-3xl border border-[#1e293b] border-dashed flex flex-col items-center justify-center">
               <div className="w-20 h-20 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Layers className="w-10 h-10 text-slate-500" />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-3">No courses available</h3>
-              <p className="text-slate-400 max-w-md mx-auto text-lg">
-                {isTeacher 
-                  ? "You haven't initialized any course syllabus structures yet."
-                  : "You are not enrolled in any grouped curriculums yet."}
-              </p>
+              
+              {isTeacher ? (
+                 <>
+                   <h3 className="text-2xl font-bold text-white mb-3">No courses available</h3>
+                   <p className="text-slate-400 max-w-md mx-auto text-lg">You haven't initialized any course syllabus structures yet.</p>
+                 </>
+              ) : (
+                 <>
+                   <h2 className="text-2xl font-black text-white" dir="rtl">היי! נראה שעדיין לא הצטרפת לקורסים.</h2>
+                   <Link href="/" className="mt-8 bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-lg shadow-indigo-500/20">
+                     לצפייה בקטלוג הקורסים
+                   </Link>
+                 </>
+              )}
             </div>
           )}
         </div>

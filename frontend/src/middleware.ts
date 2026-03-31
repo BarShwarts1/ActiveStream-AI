@@ -8,12 +8,8 @@ export async function middleware(req: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession();
 
-  const isPublicRoute = req.nextUrl.pathname === '/login';
-  
-  // Root Redirect
-  if (req.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL(session ? '/dashboard' : '/login', req.url));
-  }
+  // Whitelist exact login, root index, or singular /course/ domains explicitly bypassing protected /courses/
+  const isPublicRoute = req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/' || (req.nextUrl.pathname.startsWith('/course/') && !req.nextUrl.pathname.startsWith('/courses'));
 
   if (!session && !isPublicRoute) {
     if (!req.nextUrl.pathname.startsWith('/api') && !req.nextUrl.pathname.includes('.')) {

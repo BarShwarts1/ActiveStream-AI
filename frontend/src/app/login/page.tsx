@@ -1,12 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LayoutDashboard, LogIn, Loader2, Video } from "lucide-react";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#020617] flex justify-center items-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClientComponentClient();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -29,7 +38,8 @@ export default function LoginPage() {
           password,
         });
         if (error) throw error;
-        router.push("/dashboard");
+        const target = searchParams?.get("redirectTo") || "/dashboard";
+        router.push(target);
       } else {
         const finalRole = (role || "student").toLowerCase();
         console.log("SENDING TO SUPABASE:", { email, fullName, role: finalRole });
@@ -47,7 +57,8 @@ export default function LoginPage() {
         if (error) throw error;
         // Depending on Supabase settings, sign up might auto-login or require email verification
         // Assuming auto-login bounds
-        router.push("/dashboard");
+        const target = searchParams?.get("redirectTo") || "/dashboard";
+        router.push(target);
       }
     } catch (err: any) {
       setError(err.message || "An error occurred during authentication.");

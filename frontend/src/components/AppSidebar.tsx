@@ -21,7 +21,7 @@ export default function AppSidebar() {
       
       {/* Brand Header */}
       <div className="h-16 flex items-center px-4 border-b border-[#1e293b] shrink-0 overflow-hidden bg-[#0f172a]">
-        <Link href="/dashboard" className="flex items-center gap-3 shrink-0">
+        <Link href="/" className="flex items-center gap-3 shrink-0">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-shadow">
             <Video className="w-4 h-4 text-white" />
           </div>

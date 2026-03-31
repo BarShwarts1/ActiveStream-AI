@@ -1,7 +1,7 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
-import { PlusCircle, PlayCircle, Clock, Video } from 'lucide-react';
+import { PlusCircle, PlayCircle, Clock, Video, LayoutDashboard } from 'lucide-react';
 import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -68,6 +68,24 @@ export default async function DashboardPage() {
           <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-4 rounded-lg mb-8 font-medium">
             Failed to load lessons: {queryError.message}
           </div>
+        )}
+
+        {!queryError && lessons?.length === 0 && !isTeacher && (
+           <div className="bg-[#0f172a] border border-[#1e293b] rounded-3xl p-12 text-center flex flex-col items-center justify-center space-y-4 mb-8">
+             <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mb-2">
+                 <LayoutDashboard className="w-8 h-8 text-indigo-400" />
+             </div>
+             <h2 className="text-2xl font-black text-white" dir="rtl">היי! נראה שעדיין לא הצטרפת לקורסים.</h2>
+             <Link href="/" className="mt-4 bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-lg shadow-indigo-500/20">
+                 לצפייה בקטלוג הקורסים
+             </Link>
+          </div>
+        )}
+
+        {(!lessons || lessons.length === 0) && isTeacher && (
+           <div className="bg-[#0f172a] border border-[#1e293b] rounded-3xl p-12 text-center flex flex-col items-center justify-center mb-8">
+             <p className="text-slate-400 font-medium text-lg">You haven't uploaded any lessons yet.</p>
+           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
