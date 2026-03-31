@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Settings, Shield, Bell, Loader2, CheckCircle2, User, Save, Lock, Globe } from "lucide-react";
+import { Settings, Shield, Bell, Loader2, CheckCircle2, User, Save, Lock, Globe, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
@@ -12,7 +12,7 @@ function SettingsTabs() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "profile";
   const [activeTab, setActiveTab] = useState(initialTab);
-  
+
   // Update state if URL param changes
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -30,27 +30,33 @@ function SettingsTabs() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Visibility States
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     async function fetchUser() {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-            setUserId(session.user.id);
-            setEmail(session.user.email || "");
-            setName(session.user.user_metadata?.full_name || "");
-            
-            // Optionally, fetch from the "users" table if metadata is blank
-            if (!session.user.user_metadata?.name && !session.user.user_metadata?.full_name) {
-                const { data: profileData } = await supabase
-                    .from('users')
-                    .select('name')
-                    .eq('id', session.user.id)
-                    .single();
-                if (profileData && profileData.name) {
-                    setName(profileData.name);
-                }
-            }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUserId(session.user.id);
+        setEmail(session.user.email || "");
+        setName(session.user.user_metadata?.full_name || "");
+
+        // Optionally, fetch from the "users" table if metadata is blank
+        if (!session.user.user_metadata?.name && !session.user.user_metadata?.full_name) {
+          const { data: profileData } = await supabase
+            .from('users')
+            .select('name')
+            .eq('id', session.user.id)
+            .single();
+          if (profileData && profileData.name) {
+            setName(profileData.name);
+          }
         }
+      }
     }
     fetchUser();
   }, [supabase]);
@@ -64,60 +70,80 @@ function SettingsTabs() {
     setErrorMsg("");
 
     try {
-        if (activeTab === 'profile') {
-            // Update Auth identity Metadata
-            await supabase.auth.updateUser({
-                data: { name: name, full_name: name }
-            });
-            // Update external DB profile schema organically mapped
-            const { error: profileError } = await supabase
-                .from('users')
-                .update({ name: name })
-                .eq('id', userId);
+      if (activeTab === 'profile') {
+        // Update Auth identity Metadata
+        await supabase.auth.updateUser({
+          data: { name: name, full_name: name }
+        });
+        // Update external DB profile schema organically mapped
+        const { error: profileError } = await supabase
+          .from('users')
+          .update({ name: name })
+          .eq('id', userId);
 
-            if (profileError) throw profileError;
+        if (profileError) throw profileError;
+      }
+
+      if (activeTab === 'security' && newPassword) {
+
+        if (newPassword !== confirmPassword) {
+          throw new Error("הסיסמאות החדשות אינן תואמות");
+        }
+        if (!password) {
+          throw new Error("נא להזין סיסמה נוכחית");
         }
 
-        if (activeTab === 'security' && newPassword) {
-            const { error: pwdError } = await supabase.auth.updateUser({
-                password: newPassword
-            });
-            if (pwdError) throw pwdError;
-            setNewPassword("");
-            setPassword("");
+        // Re-authenticate securely preventing unauthorized mutations
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        });
+
+        if (signInError) {
+          throw new Error("עדכון הסיסמה נכשל. נא לוודא שהסיסמה הנוכחית נכונה");
         }
 
-        setIsSuccess(true);
-        setTimeout(() => setIsSuccess(false), 3000);
+        const { error: pwdError } = await supabase.auth.updateUser({
+          password: newPassword
+        });
+        if (pwdError) throw pwdError;
+
+        setPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      }
+
+      setIsSuccess(true);
+      setTimeout(() => setIsSuccess(false), 3000);
     } catch (err: any) {
-        console.error("Save error:", err);
-        setErrorMsg(err.message || "אירעה שגיאה בעדכון הפרופיל. אנא נסו שוב.");
-        setTimeout(() => setErrorMsg(""), 5000);
+      console.error("Save error:", err);
+      setErrorMsg(err.message || "אירעה שגיאה בעדכון הפרופיל. אנא נסו שוב.");
+      setTimeout(() => setErrorMsg(""), 5000);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="flex flex-col md:flex-row-reverse gap-8 font-sans">
-      
+
       {/* Tab Menu - Right Sidebar logically mapped RTL */}
       <div className="w-full md:w-64 shrink-0 flex flex-row md:flex-col gap-2 overflow-x-auto pb-4 md:pb-0">
-        <button 
+        <button
           onClick={() => setActiveTab("profile")}
           className={`flex items-center flex-row-reverse gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'profile' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-inner' : 'text-slate-400 hover:bg-[#1e293b] hover:text-white border border-transparent'}`}
         >
           <User className="w-4 h-4" />
           הגדרות אישיות
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab("security")}
           className={`flex items-center flex-row-reverse gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'security' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-inner' : 'text-slate-400 hover:bg-[#1e293b] hover:text-white border border-transparent'}`}
         >
           <Shield className="w-4 h-4" />
           אבטחה וסיסמה
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab("preferences")}
           className={`flex items-center flex-row-reverse gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'preferences' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-inner' : 'text-slate-400 hover:bg-[#1e293b] hover:text-white border border-transparent'}`}
         >
@@ -129,7 +155,7 @@ function SettingsTabs() {
       {/* Main Content Pane */}
       <div className="flex-1 bg-[#0f172a] rounded-3xl border border-[#1e293b] shadow-2xl p-6 md:p-10">
         <form onSubmit={handleSave} className="space-y-8 flex flex-col items-end w-full">
-          
+
           {/* Header Title strictly bounded right aligned */}
           <div className="w-full text-right mb-6 border-b border-[#1e293b] pb-4" dir="rtl">
             <h2 className="text-2xl font-black text-white tracking-tight flex items-center justify-start gap-3">
@@ -174,35 +200,63 @@ function SettingsTabs() {
 
           {activeTab === 'security' && (
             <div className="w-full space-y-6 max-w-xl self-end">
-              <div className="space-y-2 w-full text-right">
+
+              <div className="space-y-2 w-full text-right relative">
                 <label className="text-sm font-bold text-slate-300">סיסמה נוכחית</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  dir="rtl"
-                  placeholder="הקלד סיסמה פה..."
-                  className="w-full bg-[#020617] border border-[#1e293b] rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-right"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    dir="rtl"
+                    placeholder="הקלד סיסמה פה..."
+                    className="w-full bg-[#020617] border border-[#1e293b] rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-right ps-12"
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute left-4 top-3 text-slate-400 hover:text-white transition-colors">
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
-              
-              <div className="space-y-2 w-full text-right">
+
+              <div className="space-y-2 w-full text-right relative">
                 <label className="text-sm font-bold text-slate-300">סיסמה חדשה</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  dir="rtl"
-                  placeholder="הקלד סיסמה פה..."
-                  className="w-full bg-[#020617] border border-[#1e293b] rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-right"
-                />
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    dir="rtl"
+                    placeholder="הקלד סיסמה פה..."
+                    className="w-full bg-[#020617] border border-[#1e293b] rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-right ps-12"
+                  />
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute left-4 top-3 text-slate-400 hover:text-white transition-colors">
+                    {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2 w-full text-right relative">
+                <label className="text-sm font-bold text-slate-300">אימות סיסמה חדשה</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    dir="rtl"
+                    placeholder="הקלד שוב את הסיסמה..."
+                    className="w-full bg-[#020617] border border-[#1e293b] rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-right ps-12"
+                  />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute left-4 top-3 text-slate-400 hover:text-white transition-colors">
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
 
               <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start flex-row-reverse gap-3 mt-6">
-                  <Lock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-200/80 font-medium leading-relaxed" dir="rtl">
-                      מומלץ להשתמש בסיסמה חזקה המכילה אותיות, מספרים ותווים מיוחדים. המערכת תנתק אוטומטית התקנים במקרה של החלפת מפתח הפעלה מרכזי.
-                  </p>
+                <Lock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-200/80 font-medium leading-relaxed" dir="rtl">
+                  מומלץ להשתמש בסיסמה חזקה המכילה אותיות, מספרים ותווים מיוחדים.
+                </p>
               </div>
             </div>
           )}
@@ -211,22 +265,22 @@ function SettingsTabs() {
             <div className="w-full space-y-6 max-w-xl self-end">
               <div className="space-y-2 w-full text-right">
                 <label className="text-sm font-bold text-slate-300 flex items-center justify-end gap-2 flex-row-reverse">
-                    <Globe className="w-4 h-4 text-slate-500" /> שפת ממשק
+                  <Globe className="w-4 h-4 text-slate-500" /> שפת ממשק
                 </label>
                 <select dir="rtl" className="w-full bg-[#020617] border border-[#1e293b] rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-right appearance-none font-bold">
-                    <option value="he">עברית (ברירת מחדל)</option>
-                    <option value="en">English (US)</option>
+                  <option value="he">עברית (ברירת מחדל)</option>
+                  <option value="en">English (US)</option>
                 </select>
               </div>
 
               <div className="p-4 bg-[#020617] border border-[#1e293b] rounded-xl flex items-center justify-between flex-row-reverse mt-6 group hover:border-[#334155] transition-colors cursor-pointer">
-                  <div className="text-right">
-                      <h4 className="text-sm font-bold text-white mb-1" dir="rtl">התראות פוש</h4>
-                      <p className="text-xs text-slate-400 font-medium" dir="rtl">קבלת עדכונים על תמלול שיעורים חדשים ופעילויות RAG</p>
-                  </div>
-                  <div className="w-10 h-6 bg-indigo-500 rounded-full relative shadow-inner">
-                      <div className="absolute left-[calc(100%-22px)] top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all transform pointer-events-none"></div>
-                  </div>
+                <div className="text-right">
+                  <h4 className="text-sm font-bold text-white mb-1" dir="rtl">התראות פוש</h4>
+                  <p className="text-xs text-slate-400 font-medium" dir="rtl">קבלת עדכונים על תמלול שיעורים חדשים ופעילויות RAG</p>
+                </div>
+                <div className="w-10 h-6 bg-indigo-500 rounded-full relative shadow-inner">
+                  <div className="absolute left-[calc(100%-22px)] top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all transform pointer-events-none"></div>
+                </div>
               </div>
             </div>
           )}
@@ -255,17 +309,17 @@ function SettingsTabs() {
                 </>
               )}
             </button>
-            
+
             {errorMsg && (
-                <span className="text-sm font-bold text-rose-400 animate-in fade-in mr-4" dir="rtl">
-                    {errorMsg}
-                </span>
+              <span className="text-sm font-bold text-rose-400 animate-in fade-in mr-4" dir="rtl">
+                {errorMsg}
+              </span>
             )}
-            
+
             {isSuccess && (
-                <span className="text-sm font-bold text-emerald-400 animate-in fade-in mr-4" dir="rtl">
-                    החשבון עודכן בהצלחה!
-                </span>
+              <span className="text-sm font-bold text-emerald-400 animate-in fade-in mr-4" dir="rtl">
+                החשבון עודכן בהצלחה!
+              </span>
             )}
           </div>
         </form>
@@ -293,7 +347,7 @@ export default function SettingsPage() {
         </div>
 
         <Suspense fallback={<div className="w-full flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-indigo-500" /></div>}>
-            <SettingsTabs />
+          <SettingsTabs />
         </Suspense>
 
       </div>
