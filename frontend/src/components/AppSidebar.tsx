@@ -48,12 +48,12 @@ export default function AppSidebar() {
               }`}
             >
               <Icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? "text-indigo-400" : "text-slate-400 group-hover/item:text-white"}`} />
-              <span className="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75">
+              <span className="ms-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75">
                 {link.name}
               </span>
               
               {isActive && (
-                <div className="absolute left-0 w-1 h-6 bg-indigo-500 rounded-r-full" />
+                <div className="absolute start-0 w-1 h-6 bg-indigo-500 rounded-e-full" />
               )}
             </Link>
           );
@@ -65,7 +65,7 @@ export default function AppSidebar() {
         <div className="w-8 h-8 flex items-center justify-center shrink-0 cursor-pointer">
           <span className="font-black text-slate-500 text-sm hover:text-indigo-400 transition-colors">A</span>
         </div>
-        <span className="ml-4 font-bold text-slate-600 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center uppercase tracking-widest">
+        <span className="ms-4 font-bold text-slate-600 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center uppercase tracking-widest">
           Version 1.0
         </span>
       </div>

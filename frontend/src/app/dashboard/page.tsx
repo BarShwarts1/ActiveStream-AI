@@ -46,7 +46,7 @@ export default async function DashboardPage() {
           
           {isTeacher && (
             <button className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl flex items-center transition-all shadow-lg shadow-indigo-500/20">
-              <PlusCircle className="w-5 h-5 mr-2" />
+              <PlusCircle className="w-5 h-5 me-2" />
               Upload Lesson
             </button>
           )}
@@ -93,7 +93,7 @@ export default async function DashboardPage() {
                     {lesson.courses?.title || "ActiveStream Course"}
                   </div>
                 </div>
-                <h3 className="text-lg font-bold text-white mb-4 line-clamp-2 leading-tight group-hover:text-indigo-300 transition-colors">
+                <h3 dir="rtl" className="text-lg font-black text-right text-white mb-4 line-clamp-2 leading-tight group-hover:text-indigo-300 transition-colors">
                   {lesson.title}
                 </h3>
                 <div className="mt-auto flex items-center text-slate-400 text-sm font-medium">

@@ -397,11 +397,11 @@ export default function LessonPage({ params }: { params: { id: string } }) {
             )}
             {chatMessages.map((m, i) => (
               <div key={i} className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`px-4 py-2.5 rounded-2xl max-w-[90%] text-[13px] leading-relaxed shadow-sm ${
+                <div className={`px-4 py-2.5 rounded-2xl max-w-[90%] text-[13px] leading-relaxed shadow-sm text-right ${
                   m.sender === 'user' 
                     ? "bg-indigo-600 text-white rounded-br-sm" 
                     : "bg-[#1e293b] border border-[#334155] text-gray-200 rounded-bl-sm font-medium"
-                }`} dir={m.sender === 'user' ? "auto" : "rtl"}>
+                }`} dir="rtl">
                   {m.text}
                 </div>
               </div>
@@ -423,7 +423,7 @@ export default function LessonPage({ params }: { params: { id: string } }) {
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit(e as any)}
                 placeholder="שאל שאלה..."
-                className="flex-1 min-w-0 bg-[#020617] border border-[#1e293b] rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                className="flex-1 min-w-0 bg-[#020617] border border-[#1e293b] rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-right"
               />
             </form>
           </div>

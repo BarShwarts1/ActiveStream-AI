@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Assistant } from "next/font/google";
 import "./globals.css";
 import Navbar from "../components/Navbar";
 import AppSidebar from "../components/AppSidebar";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
+const assistant = Assistant({
+  subsets: ["hebrew", "latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-assistant",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -28,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#020617] text-white flex h-screen overflow-hidden`}
+        className={`${assistant.variable} font-sans antialiased bg-[#020617] text-white flex h-screen overflow-hidden`}
       >
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
