@@ -44,8 +44,8 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="bg-[#020617] text-white p-6 sm:p-10 min-h-full">
-      <div className="max-w-7xl mx-auto mt-8">
+    <div className="bg-[#020617] text-white px-6 py-4 sm:px-10 sm:py-6 min-h-full">
+      <div className="max-w-7xl mx-auto mt-0 sm:mt-2">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
           <div>
             <h1 className="text-4xl font-black tracking-tight">

@@ -371,7 +371,7 @@ export default function LessonPage({ params }: { params: { id: string } }) {
 
         {/* Right Chat Sidebar */}
         <div className={`transition-all duration-300 ease-in-out border-l border-[#1e293b] bg-[#0f172a] flex flex-col h-full z-10 relative ${chatMinimized ? 'w-0 md:w-0 opacity-0 translate-x-full' : 'w-full md:w-[20%] min-w-[300px] opacity-100 translate-x-0'}`}>
-          <div className="p-4 md:p-5 border-b border-[#1e293b] flex justify-between items-center shrink-0">
+          <div className="px-4 py-3 md:px-5 md:py-3 border-b border-[#1e293b] flex justify-between items-center shrink-0">
             <h3 className="text-sm font-black text-white tracking-wide flex items-center gap-2">
               <span className="text-indigo-500 bg-indigo-500/10 p-1.5 rounded-lg">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

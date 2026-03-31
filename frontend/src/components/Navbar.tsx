@@ -6,6 +6,7 @@ import { LogOut, Video, BookOpen, User } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import UserDropdown from "./UserDropdown";
 
 export default function Navbar() {
   const router = useRouter();
@@ -29,11 +30,6 @@ export default function Navbar() {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
   // Don't show navbar on login page to keep it clean
   if (pathname === "/login") return null;
 
@@ -45,22 +41,7 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             {isClient && session ? (
               <>
-                <div className="flex items-center gap-2 text-slate-300 bg-slate-800/50 ps-2 pe-3 py-1.5 rounded-full border border-slate-700">
-                  <div className="w-6 h-6 bg-slate-700 rounded-full flex items-center justify-center">
-                    <User className="w-3.5 h-3.5 text-slate-400" />
-                  </div>
-                  <span className="text-sm font-medium max-w-[100px] truncate hidden sm:inline-block">
-                    {session.user.user_metadata?.full_name || session.user.email}
-                  </span>
-                </div>
-
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-red-400 transition-colors ms-2"
-                  title="Sign Out"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
+                <UserDropdown session={{ user: session.user }} />
               </>
             ) : isClient && !session ? (
               <Link 

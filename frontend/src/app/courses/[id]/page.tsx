@@ -49,8 +49,8 @@ export default async function CourseSyllabusPage({ params }: { params: { id: str
   const lessons = course.lessons ? [...course.lessons].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) : [];
 
   return (
-    <div className="bg-[#020617] text-white p-6 sm:p-10 min-h-full">
-      <div className="max-w-5xl mx-auto mt-8">
+    <div className="bg-[#020617] text-white px-6 py-4 sm:px-10 sm:py-6 min-h-full">
+      <div className="max-w-5xl mx-auto mt-0 sm:mt-2">
         
         {/* Navigation Breadcrumb */}
         <Link href="/my-courses" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8 font-medium">
