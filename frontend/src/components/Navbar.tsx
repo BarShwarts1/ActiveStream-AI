@@ -39,20 +39,9 @@ export default function Navbar() {
 
   return (
     <nav className="border-b border-[#1e293b] bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+      <div className="w-full px-6 sm:px-8">
+        <div className="flex justify-end h-16 items-center">
           
-          <div className="flex items-center gap-3">
-            <Link href={session ? "/dashboard" : "/"} className="flex items-center gap-2 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center p-1 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-all">
-                <Video className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-white text-lg tracking-tight hidden sm:block">
-                ActiveStream <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">AI</span>
-              </span>
-            </Link>
-          </div>
-
           <div className="flex items-center gap-4">
             {isClient && session ? (
               <>
