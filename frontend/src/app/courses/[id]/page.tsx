@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { BookOpen, Clock, PlayCircle, Video, List, ArrowRight } from 'lucide-react';
+import UploadLessonButton from '@/components/UploadLessonButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,9 @@ export default async function CourseSyllabusPage({ params }: { params: { id: str
   
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/login');
+
+  const role = session.user?.user_metadata?.role || 'student';
+  const isTeacher = role === 'teacher';
 
   const { data: course, error } = await supabase
     .from('courses')
@@ -89,13 +93,19 @@ export default async function CourseSyllabusPage({ params }: { params: { id: str
 
         {/* Content Section */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block"></span>
-            Course Modules
-          </h2>
-          <span className="text-slate-400 font-medium bg-[#1e293b] px-3 py-1 rounded-full text-sm">
-            {lessons.length} {lessons.length === 1 ? 'Module' : 'Modules'}
-          </span>
+          <div className="flex items-center gap-4">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block"></span>
+              Course Modules
+            </h2>
+            <span className="text-slate-400 font-medium bg-[#1e293b] px-3 py-1 rounded-full text-sm">
+              {lessons.length} {lessons.length === 1 ? 'Module' : 'Modules'}
+            </span>
+          </div>
+          
+          {isTeacher && (
+            <UploadLessonButton courseId={id} />
+          )}
         </div>
 
         {/* Lessons List */}

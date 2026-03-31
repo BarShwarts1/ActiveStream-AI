@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Layers, PlusCircle } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import CourseCard from '@/components/CourseCard';
+import CreateCourseButton from '@/components/CreateCourseButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,16 +20,30 @@ export default async function MyCoursesPage() {
   const role = session.user?.user_metadata?.role || 'student';
   const isTeacher = role === 'teacher';
 
-  // Fetch courses with a count of their lessons mapping exactly to the schema.sql relations
-  const { data: courses, error } = await supabase
-    .from('courses')
-    .select(`
-      id,
-      title,
-      created_at,
-      lessons ( id )
-    `)
-    .order('created_at', { ascending: false });
+  let courses: any[] = [];
+  let queryError = null;
+
+  if (!isTeacher) {
+    const { data: enrolls } = await supabase.from('enrollments').select('course_id').eq('user_id', session.user.id);
+    const courseIds = enrolls?.map((e: any) => e.course_id) || [];
+    
+    if (courseIds.length > 0) {
+      const { data, error } = await supabase
+        .from('courses')
+        .select(`id, title, created_at, lessons(id)`)
+        .in('id', courseIds)
+        .order('created_at', { ascending: false });
+      courses = data || [];
+      queryError = error;
+    }
+  } else {
+    const { data, error } = await supabase
+      .from('courses')
+      .select(`id, title, created_at, lessons(id)`)
+      .order('created_at', { ascending: false });
+    courses = data || [];
+    queryError = error;
+  }
 
   return (
     <div className="bg-[#020617] text-white p-6 sm:p-10 min-h-full">
@@ -44,16 +59,13 @@ export default async function MyCoursesPage() {
           </div>
 
           {isTeacher && (
-            <button className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl flex items-center transition-all shadow-lg shadow-indigo-500/20">
-              <PlusCircle className="w-5 h-5 mr-2" />
-              New Course
-            </button>
+            <CreateCourseButton />
           )}
         </div>
 
-        {error && (
+        {queryError && (
           <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-4 rounded-lg mb-8 font-medium">
-            Failed to load courses: {error.message}
+            Failed to load courses: {queryError.message}
           </div>
         )}
 

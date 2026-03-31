@@ -18,18 +18,30 @@ export default async function DashboardPage() {
   const role = session.user?.user_metadata?.role || 'student';
   const isTeacher = role === 'teacher';
 
-  const { data: lessons, error } = await supabase
-    .from('lessons')
-    .select(`
-      id,
-      title,
-      video_url,
-      created_at,
-      courses (
-        title
-      )
-    `)
-    .order('created_at', { ascending: false });
+  let lessons: any[] = [];
+  let queryError = null;
+
+  if (!isTeacher) {
+    const { data: enrolls } = await supabase.from('enrollments').select('course_id').eq('user_id', session.user.id);
+    const courseIds = enrolls?.map((e: any) => e.course_id) || [];
+    
+    if (courseIds.length > 0) {
+      const { data, error } = await supabase
+        .from('lessons')
+        .select(`id, title, video_url, created_at, courses(title)`)
+        .in('course_id', courseIds)
+        .order('created_at', { ascending: false });
+      lessons = data || [];
+      queryError = error;
+    }
+  } else {
+    const { data, error } = await supabase
+      .from('lessons')
+      .select(`id, title, video_url, created_at, courses(title)`)
+      .order('created_at', { ascending: false });
+    lessons = data || [];
+    queryError = error;
+  }
 
   return (
     <div className="bg-[#020617] text-white p-6 sm:p-10 min-h-full">
@@ -45,16 +57,16 @@ export default async function DashboardPage() {
           </div>
           
           {isTeacher && (
-            <button className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl flex items-center transition-all shadow-lg shadow-indigo-500/20">
-              <PlusCircle className="w-5 h-5 me-2" />
-              Upload Lesson
-            </button>
+            <div className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+              Teacher Mode
+            </div>
           )}
         </div>
 
-        {error && (
+        {queryError && (
           <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-4 rounded-lg mb-8 font-medium">
-            Failed to load lessons: {error.message}
+            Failed to load lessons: {queryError.message}
           </div>
         )}
 
