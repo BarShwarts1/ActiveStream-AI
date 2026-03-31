@@ -56,20 +56,6 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             {isClient && session ? (
               <>
-                <Link 
-                  href="/dashboard"
-                  className={`flex items-center gap-2 text-sm font-medium transition-colors px-3 py-2 rounded-md ${
-                    pathname === "/dashboard" 
-                      ? "bg-indigo-500/10 text-indigo-400" 
-                      : "text-slate-400 hover:text-white hover:bg-slate-800"
-                  }`}
-                >
-                  <BookOpen className="w-4 h-4" />
-                  <span className="hidden sm:inline">My Courses</span>
-                </Link>
-                
-                <div className="h-6 w-px bg-slate-700 hidden sm:block"></div>
-                
                 <div className="flex items-center gap-2 text-slate-300 bg-slate-800/50 pl-2 pr-3 py-1.5 rounded-full border border-slate-700">
                   <div className="w-6 h-6 bg-slate-700 rounded-full flex items-center justify-center">
                     <User className="w-3.5 h-3.5 text-slate-400" />

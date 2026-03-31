@@ -32,7 +32,7 @@ export default async function DashboardPage() {
     .order('created_at', { ascending: false });
 
   return (
-    <main className="min-h-screen bg-[#020617] text-white p-6 sm:p-10">
+    <div className="bg-[#020617] text-white p-6 sm:p-10 min-h-full">
       <div className="max-w-7xl mx-auto mt-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
           <div>
@@ -123,6 +123,6 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
-    </main>
+    </div>
   );
 }
