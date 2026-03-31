@@ -8,8 +8,8 @@ import { supabase } from "@/lib/supabaseClient";
 
 const ReactPlayer = dynamic<any>(() => import("react-player"), { ssr: false });
 
-export default function LessonPage({ params }: { params: { lessonId: string } }) {
-  const { lessonId } = params;
+export default function LessonPage({ params }: { params: { id: string } }) {
+  const { id } = params;
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [hasPausedForPractice, setHasPausedForPractice] = useState(false);
@@ -47,7 +47,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
   }, [hasPausedForPractice]);
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://${NETWORK_IP}:8000/ws/tutor/${lessonId}`);
+    const ws = new WebSocket(`ws://${NETWORK_IP}:8000/ws/tutor/${id}`);
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
@@ -58,7 +58,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
     };
     chatWsRef.current = ws;
     return () => ws.close();
-  }, [lessonId, NETWORK_IP]);
+  }, [id, NETWORK_IP]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -72,7 +72,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
         const { data: lesson, error: lessonError } = await supabase
           .from('lessons')
           .select('*')
-          .eq('id', lessonId)
+          .eq('id', id)
           .single();
 
         if (lessonError) {
@@ -83,7 +83,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
         const { data: stops, error: stopsError } = await supabase
           .from('smart_stops')
           .select('*')
-          .eq('lesson_id', lessonId)
+          .eq('lesson_id', id)
           .order('timestamp_seconds', { ascending: true });
 
         if (!stopsError && stops) {
@@ -98,7 +98,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
     };
     
     fetchLessonData();
-  }, [lessonId]);
+  }, [id]);
 
   const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     if (!isPlaying) return;
@@ -278,7 +278,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
                 
                 <div className="flex-1 relative min-h-0 flex items-center justify-center">
                   <TutorCanvas
-                    roomId={lessonId}
+                    roomId={id}
                     isPcViewer={true}
                     activePrompt={activeStop?.prompt_text}
                     activeTimestamp={activeStop?.timestamp_seconds}
@@ -469,13 +469,13 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
               <div className="mt-4 flex flex-col items-center bg-[#020617] border border-[#1e293b] rounded-xl p-4 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-xl z-20">
                 <div className="bg-white p-2 rounded-xl">
                   <QRCodeSVG 
-                    value={`http://${NETWORK_IP}:3000/lesson/${lessonId}/draw`} 
+                    value={`http://${NETWORK_IP}:3000/lesson/${id}/draw`} 
                     size={140} 
                     level="H" 
                   />
                 </div>
                 <p className="text-[10px] text-gray-500 font-mono mt-3 break-all text-center">
-                  http://{NETWORK_IP}:3000/lesson/{lessonId}/draw
+                  http://{NETWORK_IP}:3000/lesson/{id}/draw
                 </p>
               </div>
             )}
