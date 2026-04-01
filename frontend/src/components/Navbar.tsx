@@ -30,8 +30,8 @@ export default function Navbar() {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  // Don't show navbar on login page to keep it clean
-  if (pathname === "/login") return null;
+  // Don't show navbar on login page, storefront, or public landing pages to keep it pristine
+  if (pathname === "/login" || pathname === "/" || pathname.startsWith("/course/")) return null;
 
   return (
     <nav className="border-b border-[#1e293b] bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-50">
@@ -48,7 +48,7 @@ export default function Navbar() {
                 href="/login"
                 className="bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors border border-indigo-400/50"
               >
-                Sign In
+                התחברות
               </Link>
             ) : null}
           </div>

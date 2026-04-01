@@ -172,7 +172,7 @@ function LoginForm() {
               ) : (
                 <>
                   {isLogin ? <LogIn className="w-5 h-5 mr-2" /> : <LayoutDashboard className="w-5 h-5 mr-2" />}
-                  {isLogin ? "Sign In" : "Create Account"}
+                  {isLogin ? "התחברות" : "הרשמה"}
                 </>
               )}
             </button>
@@ -186,7 +186,7 @@ function LoginForm() {
               }}
               className="text-[#94a3b8] hover:text-white text-sm font-medium transition-colors"
             >
-              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+              {isLogin ? "אין לך חשבון? הרשמה" : "יש לך חשבון? התחברות"}
             </button>
           </div>
         </div>

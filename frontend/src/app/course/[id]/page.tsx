@@ -87,8 +87,8 @@ export default async function PublicCourseLandingPage({ params }: { params: { id
               <EnrollmentButton courseId={course.id} />
             </div>
 
-            <p className="text-xs text-slate-500 text-center mt-6 font-medium tracking-wide">
-              SECURE ACCESS • INSTANT ACTIVATION
+            <p className="text-xs text-slate-500 text-center mt-6 font-medium tracking-wide" dir="rtl">
+              גישה מאובטחת • הפעלה מיידית
             </p>
           </div>
 

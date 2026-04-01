@@ -7,8 +7,8 @@ import { LayoutDashboard, BookOpen, Settings, Video } from "lucide-react";
 export default function AppSidebar() {
   const pathname = usePathname();
 
-  // Hide entirely on auth screen
-  if (pathname === "/login") return null;
+  // Hide entirely on auth screen & public storefronts
+  if (pathname === "/login" || pathname === "/" || pathname.startsWith("/course/")) return null;
 
   const links = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
