@@ -2,12 +2,28 @@ import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { Lock, PlayCircle, BookOpen, Clock, FileText } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import EnrollmentButton from "@/components/EnrollmentButton";
 
 export const dynamic = "force-dynamic";
 
 export default async function PublicCourseLandingPage({ params }: { params: { id: string } }) {
   const supabase = createServerComponentClient({ cookies });
+
+  // Auto-redirect enrolled users to the private syllabus
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    const { data: enrollment } = await supabase
+      .from('enrollments')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .eq('course_id', params.id)
+      .single();
+    
+    if (enrollment) {
+      redirect(`/courses/${params.id}`);
+    }
+  }
 
   // Fetch Public Course Data rigidly
   const { data: course, error } = await supabase

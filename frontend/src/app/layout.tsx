@@ -14,6 +14,9 @@ const assistant = Assistant({
 export const metadata: Metadata = {
   title: "ActiveStream AI",
   description: "ActiveStream AI",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

@@ -45,7 +45,7 @@ export default function EnrollmentButton({ courseId }: { courseId: string }) {
 
   const handleAction = async () => {
     if (status === "logged-out") {
-      router.push(`/login?redirectTo=/course/${courseId}`);
+      router.push(`/login?redirectTo=/courses/${courseId}`);
       return;
     }
 

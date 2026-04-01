@@ -18,7 +18,8 @@ export async function middleware(req: NextRequest) {
   }
 
   if (session && req.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+    const redirectTo = req.nextUrl.searchParams.get('redirectTo') || '/dashboard';
+    return NextResponse.redirect(new URL(redirectTo, req.url));
   }
 
   return res;
