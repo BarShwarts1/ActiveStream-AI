@@ -9,16 +9,11 @@ interface CourseCardProps {
     title: string;
     created_at: string;
     lessons?: any[];
-    progress?: number;
   };
 }
 
 export default function CourseCard({ course }: CourseCardProps) {
-  const lessonCount = Array.isArray(course.lessons) && course.lessons.length > 0 && typeof course.lessons[0].count === 'number' 
-    ? course.lessons[0].count 
-    : (Array.isArray(course.lessons) ? course.lessons.length : 0);
-    
-  const progress = course.progress || 0;
+  const lessonCount = course.lessons ? course.lessons.length : 0;
   const targetHref = `/courses/${course.id}`;
 
   return (
@@ -65,14 +60,6 @@ export default function CourseCard({ course }: CourseCardProps) {
           
           {lessonCount === 0 && (
             <span className="text-[10px] uppercase text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">Empty</span>
-          )}
-          
-          {lessonCount > 0 && progress === 0 && (
-            <span className="text-[10px] uppercase text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-lg border border-indigo-500/20">START</span>
-          )}
-
-          {lessonCount > 0 && progress > 0 && (
-            <span className="text-[10px] uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">IN PROGRESS</span>
           )}
         </div>
       </div>

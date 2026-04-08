@@ -26,17 +26,17 @@ export default async function MyCoursesPage() {
   if (!isTeacher) {
     const { data, error } = await supabase
       .from('enrollments')
-      .select('*, courses(*, lessons(count))')
+      .select('*, courses(*)')
       .eq('user_id', user.id);
       
     if (data) {
-      courses = data.map((e: any) => ({ ...e.courses, progress: e.progress || 0 })).filter(Boolean);
+      courses = data.map((e: any) => e.courses).filter(Boolean);
     }
     queryError = error;
   } else {
     const { data, error } = await supabase
       .from('courses')
-      .select(`id, title, created_at, lessons(count)`)
+      .select(`id, title, created_at, lessons(id)`)
       .order('created_at', { ascending: false });
     courses = data || [];
     queryError = error;
