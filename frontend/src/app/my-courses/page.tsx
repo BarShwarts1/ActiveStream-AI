@@ -11,31 +11,28 @@ export const dynamic = 'force-dynamic';
 export default async function MyCoursesPage() {
   const supabase = createServerComponentClient({ cookies });
   
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
   
-  if (!session) {
+  if (!user) {
     redirect('/login');
   }
 
-  const role = session.user?.user_metadata?.role || 'student';
+  const role = user.user_metadata?.role || 'student';
   const isTeacher = role === 'teacher';
 
   let courses: any[] = [];
   let queryError = null;
 
   if (!isTeacher) {
-    const { data: enrolls } = await supabase.from('enrollments').select('course_id').eq('user_id', session.user.id);
-    const courseIds = enrolls?.map((e: any) => e.course_id) || [];
-    
-    if (courseIds.length > 0) {
-      const { data, error } = await supabase
-        .from('courses')
-        .select(`id, title, created_at, lessons(id)`)
-        .in('id', courseIds)
-        .order('created_at', { ascending: false });
-      courses = data || [];
-      queryError = error;
+    const { data, error } = await supabase
+      .from('enrollments')
+      .select('*, courses(*)')
+      .eq('user_id', user.id);
+      
+    if (data) {
+      courses = data.map((e: any) => e.courses).filter(Boolean);
     }
+    queryError = error;
   } else {
     const { data, error } = await supabase
       .from('courses')

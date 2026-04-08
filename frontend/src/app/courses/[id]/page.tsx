@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { BookOpen, Clock, PlayCircle, Video, List, ArrowRight } from 'lucide-react';
 import UploadLessonButton from '@/components/UploadLessonButton';
+import AutoEnrollHandler from '@/components/AutoEnrollHandler';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,7 @@ export default async function CourseSyllabusPage({ params }: { params: { id: str
 
   return (
     <div className="bg-[#020617] text-white px-6 py-4 sm:px-10 sm:py-6 min-h-full">
+      <AutoEnrollHandler courseId={id} />
       <div className="max-w-5xl mx-auto mt-0 sm:mt-2">
         
         {/* Navigation Breadcrumb */}

@@ -11,8 +11,11 @@ export default function EnrollmentButton({ courseId }: { courseId: string }) {
   
   const [status, setStatus] = useState<"loading" | "logged-out" | "not-enrolled" | "enrolled">("loading");
   const [userId, setUserId] = useState<string | null>(null);
+  const [fullName, setFullName] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+
 
   useEffect(() => {
     async function checkAuthAndEnrollment() {
@@ -24,6 +27,7 @@ export default function EnrollmentButton({ courseId }: { courseId: string }) {
       }
       
       setUserId(session.user.id);
+      setFullName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || "Student");
 
       // Check enrollment
       const { data } = await supabase
@@ -45,7 +49,8 @@ export default function EnrollmentButton({ courseId }: { courseId: string }) {
 
   const handleAction = async () => {
     if (status === "logged-out") {
-      router.push(`/login?redirectTo=/courses/${courseId}`);
+      const redirectUrl = encodeURIComponent(`/courses/${courseId}?autoEnroll=true`);
+      router.push(`/login?redirectTo=${redirectUrl}`);
       return;
     }
 
@@ -60,18 +65,17 @@ export default function EnrollmentButton({ courseId }: { courseId: string }) {
         const res = await fetch("http://localhost:8000/api/enroll", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, course_id: courseId })
+          body: JSON.stringify({ user_id: userId, course_id: courseId, full_name: fullName })
         });
         
-        if (!res.ok) throw new Error("API validation failed");
-        
-        setIsSuccess(true);
-        setStatus("enrolled");
-        
-        // Instant Redirect handling
-        setTimeout(() => {
+        if (res.status === 201) {
+          console.log("Enrollment saved successfully, redirecting...");
+          setIsSuccess(true);
+          setStatus("enrolled");
           router.push(`/courses/${courseId}`);
-        }, 1200);
+        } else {
+          throw new Error("Enrollment failed or did not return 201");
+        }
 
       } catch (err) {
         console.error("Enrollment error:", err);
